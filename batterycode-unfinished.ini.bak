@@ -1,0 +1,26 @@
+;[ImageBattery]
+;Meter=Image
+;Plugin=RunCommand
+;ImageName=battery.png
+;X=(#SCREENAREAWIDTH# - 152)
+;Y=#vOffset#
+;W=46
+;H=36
+
+;[MeasureBatteryPercent]
+;Measure=Plugin
+;Plugin=PowerPlugin
+;PowerState=Percent
+
+;[MeterBatteryBar]
+;Meter=BAR
+;DynamicVariables=1
+;MeasureName=MeasureBatteryPercent
+;X=(#SCREENAREAWIDTH# - 146)
+;Y=#vOffset#
+;Padding=0,12,0,12
+;W=32
+;H=12
+;BarImage=batterysegment.png
+;BarOrientation=Horizontal
+;SolidColor=47,47,47,0
