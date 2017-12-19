@@ -14,11 +14,7 @@ vVolumeIncrement=4
 vSteamColor=102,192,244,255
 vNotifierHeight=2
 vPreSteamNameUrl="http://steamcommunity.com/id/"
-; UnitOfMeasure can be "f" (Fahrenheit / Imperial) or "m" (Celsius / Metric)
 UnitOfMeasure=m
-; Number of days to return in the feed.(1-6).
-; The feed will always return the current conditions and the forecast for "Today"
-; Then up to 5 additional forecast days. (Day 1 - Day 5)
 DaysFeed=1
 ; Locale (language) to use in the feed.
 ; https://msdn.microsoft.com/en-us/goglobal/bb896001.aspx
