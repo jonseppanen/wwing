@@ -1,5 +1,7 @@
 # Windows Wing
 
+![Desktop](https://i.redd.it/cqtf8xfhzf401.jpg)
+
 WWing (Short for Windows Wing) is a highly user-experience focused top-bar theme for rainmeter.
 
 It follows the concept of *One Action* for any operation.
