@@ -43,6 +43,7 @@ If your steam friends page does not match this format (most do) you will need to
 ### Volume Meter
 
 ![Volume Meter](https://i.imgur.com/kY1VMFV.jpg)
+
 There is a right/left VU meter at the top of the icon.
 
 Mouse over to see the current volume.
@@ -53,6 +54,7 @@ Mouse over to see the current volume.
 ### CPU Meter
 
 ![CPU Meter](https://i.imgur.com/0MqZInl.jpg)
+
 The CPU meter overlays the start button, with a simple radial meter.
 
 ### Main Bar
