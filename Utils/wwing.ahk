@@ -7,6 +7,10 @@ downloadDir := "C:\Users\" . A_UserName . "\Downloads\*.*"
 WatchState := 10
 AppVisibility := ComObjCreate(CLSID_AppVisibility := "{7E5FE3D9-985F-4908-91F9-EE19F9FD1514}", IID_IAppVisibility := "{2246EA2D-CAEA-4444-A3C4-6DE827E44313}")
 OnMessage(16687, "HeartBeat")
+OnMessage(16686, "OpenDownloads")
+OnMessage(16685, "OpenSearch")
+OnMessage(16684, "OpenStart")
+OnMessage(16683, "OpenNotifications")
 SetTimer "CheckForMaxedWindow", 150
 SetTimer "CheckForDownloadsInProgress", 2000
 
@@ -24,6 +28,29 @@ if(!FileExist("C:\Users\" . A_UserName . "\profile.bmp"))
   }
 }
 return
+
+OpenDownloads(){
+  If(WinExist(Downloads))
+  {
+      WinActivate
+  }
+  else{
+      Run(explore "C:\Users\" . A_UserName . "\Downloads")
+  }
+}
+
+OpenSearch(){
+  send "#s"
+}
+
+OpenStart(){
+  SendRainmeterCommand("[!SetVariable MinMax 1]")
+  sendinput "{LWin}"
+}
+
+OpenNotifications(){
+  sendinput "#a"
+}
 
 HeartBeat(wParam, lParam) { 
 global WatchState
@@ -109,16 +136,5 @@ CheckForDownloadsInProgress(){
       }
   }
 }
-
-GetCurrentCityForWeather(){
-  ipfile := "C:\Users\" . A_UserName . "\ipaddress.txt"
-  Download "http://freegeoip.net/csv", ipfile
-  PublicIP := FileRead(ipfile)
-  FileDelete "C:\Users\" . A_UserName . "\ipaddress.txt"
-  MsgBox PublicIP
-  SendRainmeterCommand("[!SetVariable Downloading 1]")
-}
-
-
 
 

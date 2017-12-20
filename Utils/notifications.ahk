@@ -1,1 +1,0 @@
-sendinput "#a"
