@@ -14,7 +14,7 @@ OnMessage(16683, "OpenNotifications")
 SetTimer "CheckForMaxedWindow", 150
 SetTimer "CheckForDownloadsInProgress", 2000
 
-if(!FileExist("C:\Users\" . A_UserName . "\profile.bmp"))
+if(!FileExist("C:\Users\" . A_UserName . "\wwing\profile.bmp"))
 {
   Loop Files, "C:\Users\" . A_UserName . "\AppData\Roaming\Microsoft\Windows\AccountPictures\*" 
   {
@@ -22,7 +22,7 @@ if(!FileExist("C:\Users\" . A_UserName . "\profile.bmp"))
     {
       RunWait("AccountPicConverter.exe " . A_LoopFileFullPath,,hide)
       FileDelete "*-448.bmp"
-      FileMove "*-96.bmp", "C:\Users\" . A_UserName . "\profile.bmp",true
+      FileMove "*-96.bmp", "C:\Users\" . A_UserName . "\wwing\profile.bmp",true
       break
     }
   }
