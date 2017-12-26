@@ -12,8 +12,14 @@ In regards to this skin, it means that any of it's features are usable with that
 
 ## Features
 
+### Personal User Config folder
+A personal User Config folder is stored in your c:\Users\username folder. Any variables you save in this file are remembered and left the hell alone. I will soon
+be writing an auto updater for the skin so your settings persist. If you just updating using the RMSkin release files these will also persist.
+
 ### Weather
 **Your location is gathered automatically and weather is parsed from it** - I know right? No more country code lookup and variable hacking.
+
+If you want to select a more precise location, **Right Click** the weather text and enter it in - format **City,Country** - the skin will then keep these settings.
 
 ### Spotify
 ![Spotify](https://i.imgur.com/cKkubKN.jpg)
@@ -75,6 +81,7 @@ The main bar will fill to fully opaque black whenever there is at least one maxi
 ### System Tray
 - I recommend having your systray set at the top right of your screen. 
 - The systray icons need to be 48 pixels high. 
+- The skin used for nexus dock has to be a tile based skin, and set to be transparent background. 
 - The icons need a border of Top: 0px, Right: 10px, Bottom: 20px, Left: 10px. 
 - If you are using winstep nexus you will need 1px vertical icon spacing, at -1px offset (for a total of 0px vert spacing for the icons).
 - The notification mode icon uses a 48px x 2px sizing along the top.
