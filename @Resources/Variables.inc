@@ -1,6 +1,7 @@
 [Variables]
 
 vAccentColor=255,100,100,255
+vDarkFontColor=180,180,180,255
 vTooltipColor=44,44,44,255
 vIconWidth = 48
 vIconHeight = 40
