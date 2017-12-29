@@ -1,5 +1,6 @@
 [Variables]
 
+vMediaTrackProgress=0
 vSkinSteamWidth=400
 vSkinMediaPlayerWidth=300
 vSkinNetworkWidth=300
