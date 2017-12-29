@@ -1,5 +1,8 @@
 [Variables]
 
+vSkinSteamWidth=400
+vSkinMediaPlayerWidth=300
+vSkinNetworkWidth=300
 vAccentColor=255,100,100,255
 vDarkFontColor=180,180,180,255
 vTooltipColor=44,44,44,255
@@ -18,7 +21,6 @@ vWeatherDaysFeed=1
 vWeatherLocale=en_US
 vWeatherIcon="temperature"
 vWeatherText="Please wait, Loading Weather..."
-vMediaTrackProgress = 0
 vFontFace="Segoe UI SemiLight"
 vFontSize=12
 vWWingUserDir = c:\users\%USERNAME%\wwing\
