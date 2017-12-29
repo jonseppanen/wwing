@@ -1,12 +1,15 @@
 [Variables]
 
 vMediaTrackProgress=0
+vSkinWidth=300
+vTooltipPadding=10
 vSkinSteamWidth=400
 vSkinMediaPlayerWidth=300
 vSkinNetworkWidth=300
-vAccentColor=255,100,100,255
-vDarkFontColor=180,180,180,255
 vTooltipColor=44,44,44,255
+vLightFontColor=255,255,255,255
+vDarkFontColor=180,180,180,255
+vAccentColor=255,100,100,255
 vIconWidth = 48
 vIconHeight = 40
 vOffset = 0
@@ -24,6 +27,9 @@ vWeatherIcon="temperature"
 vWeatherText="Please wait, Loading Weather..."
 vFontFace="Segoe UI SemiLight"
 vFontSize=12
+vSubHeadingSize=16
+vHeadingSize=20
+vLargeHeadingSize=28
 vWWingUserDir = c:\users\%USERNAME%\wwing\
 @Include2=#vWWingUserDir#variables.inc
-
+@Include3=#@#\stylesheet.inc
