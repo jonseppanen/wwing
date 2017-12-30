@@ -10,24 +10,30 @@ W=(#vSkinWidth#-(#vTooltipPadding# * 2))
 X=0
 Y=R
 StringCase=Upper
+
+[sPaddingBottom]
+padding=#vTooltipPadding#,0,#vTooltipPadding#,#vTooltipPadding#
+
+[sPaddingTop]
+padding=#vTooltipPadding#,#vTooltipPadding#,#vTooltipPadding#,0
+
+[sPaddingAll]
 padding=#vTooltipPadding#,#vTooltipPadding#,#vTooltipPadding#,#vTooltipPadding#
 
+[sPaddingSides]
+Padding=#vTooltipPadding#,0,#vTooltipPadding#,0
+
 [sDescriptor]
-padding=#vTooltipPadding#,#vTooltipPadding#,#vTooltipPadding#,0
 FontColor=#vDarkFontColor#
 
 [sMaintext]
-padding=#vTooltipPadding#,0,#vTooltipPadding#,#vTooltipPadding#
 FontSize=#vSubHeadingSize#
 FontColor=#vAccentColor#
 
 [sHeadingText]
-padding=#vTooltipPadding#,#vTooltipPadding#,#vTooltipPadding#,0
 FontSize=#vHeadingSize#
 FontWeight=700
 
 [sLargeHeadingText]
-w=(#vSkinWidth# - #vTooltipPadding#)
-padding=(#vTooltipPadding#/2),0,(#vTooltipPadding#/2),0
 FontSize=#vLargeHeadingSize#
 FontWeight=700

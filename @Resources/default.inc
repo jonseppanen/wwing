@@ -18,8 +18,6 @@ vAccentColor=255,100,100,255
 
 ;Enter a custom tooltip background color here. Used as the solid color behind tootlips. It is entered 
 
-;in the format RRR,GGG,BBB,AAA. Transparent colors are not *quite* finished yet.
-
 vTooltipColor=44,44,44,255
 
 ;Enter media player choice here. Valid are: Spotify. Coming soon are: Google, iTunes, Apple, Winamp
