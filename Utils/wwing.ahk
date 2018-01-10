@@ -3,10 +3,11 @@ SendMode Input
 SetTitleMatchMode "RegEx"
 #SingleInstance force
 
-downloadDir := "C:\Users\" . A_UserName . "\Downloads\*.*"
-WatchState := 10
+SendRainmeterCommand("[!SetVariable AHKVersion " . A_AhkVersion . " wwing]")
+SendRainmeterCommand("[!UpdateMeasure MeasureWindowMessage wwing]")
+UserDir := EnvGet("USERPROFILE")
+downloadDir := UserDir . "\Downloads\*.*"
 AppVisibility := ComObjCreate(CLSID_AppVisibility := "{7E5FE3D9-985F-4908-91F9-EE19F9FD1514}", IID_IAppVisibility := "{2246EA2D-CAEA-4444-A3C4-6DE827E44313}")
-OnMessage(16687, "HeartBeat")
 OnMessage(16686, "OpenDownloads")
 OnMessage(16685, "OpenSearch")
 OnMessage(16684, "OpenStart")
@@ -14,15 +15,15 @@ OnMessage(16683, "OpenNotifications")
 SetTimer "CheckForMaxedWindow", 150
 SetTimer "CheckForDownloadsInProgress", 2000
 
-if(!FileExist("C:\Users\" . A_UserName . "\wwing\profile.bmp"))
+if(!FileExist(UserDir . "\wwing\profile.bmp"))
 {
-  Loop Files, "C:\Users\" . A_UserName . "\AppData\Roaming\Microsoft\Windows\AccountPictures\*" 
+  Loop Files, UserDir . "\AppData\Roaming\Microsoft\Windows\AccountPictures\*" 
   {
     if(A_LoopFileExt = "accountpicture-ms")
     {
       RunWait("AccountPicConverter.exe " . A_LoopFileFullPath,,hide)
       FileDelete "*-448.bmp"
-      FileMove "*-96.bmp", "C:\Users\" . A_UserName . "\wwing\profile.bmp",true
+      FileMove "*-96.bmp", UserDir . "\wwing\profile.bmp",true
       break
     }
   }
@@ -35,7 +36,7 @@ OpenDownloads(){
       WinActivate
   }
   else{
-      Run(explore "C:\Users\" . A_UserName . "\Downloads")
+      Run(explore UserDir . "\Downloads")
   }
 }
 
@@ -44,20 +45,12 @@ OpenSearch(){
 }
 
 OpenStart(){
-  SendRainmeterCommand("[!SetVariable MinMax 1]")
+  SendRainmeterCommand("[!SetVariable MinMax 1 wwing]")
   sendinput "{LWin}"
 }
 
 OpenNotifications(){
   sendinput "#a"
-}
-
-HeartBeat(wParam, lParam) { 
-global WatchState
-  If (wParam = 2) {
-    WatchState := 10
-    ;MsgBox(lParam)
-  }
 }
 
 IsWindowCloaked(hwnd) {
@@ -66,16 +59,15 @@ IsWindowCloaked(hwnd) {
 }
 
 SendRainmeterCommand(command) {
-  id := WinGetList("ahk_class RainmeterMeterWindow",,,)
-  Loop id.Length()
-  {
-      thisId := id[A_Index]
-      WinGetPos(X,Y,,H,"ahk_id " thisId)
-      if(H = 40 && X = 0 && Y = 0){
-          Send_WM_COPYDATA(command, "ahk_id " thisId)
-          break
-      }
-  }
+    if(Send_WM_COPYDATA(command, "ahk_class RainmeterMeterWindow") = 1){
+        WinShow("ahk_class Shell_TrayWnd")
+        WinShow("ahk_class Start Button")
+        ExitApp
+    }
+    else{
+        WinHide("ahk_class Shell_TrayWnd")
+        WinHide("ahk_class Start Button")
+    }
 }
 
 Send_WM_COPYDATA(ByRef StringToSend, ByRef TargetWindowClass)  
@@ -91,19 +83,7 @@ Send_WM_COPYDATA(ByRef StringToSend, ByRef TargetWindowClass)
 }
 
 CheckForMaxedWindow(){
-  Global WatchState
   Global AppVisibility
-  WatchState--
-
-  If (WatchState < 1) {
-    WinShow("ahk_class Shell_TrayWnd")
-    WinShow("ahk_class Start Button")
-    ExitApp
-  }
-  else
-  {
-    WinHide("ahk_class Shell_TrayWnd")
-    WinHide("ahk_class Start Button")
     MinMaxVariable := 0
     id := WinGetList(,, "Program Manager|^$")
     Loop id.Length()
@@ -117,8 +97,7 @@ CheckForMaxedWindow(){
         break
       }
     }
-    SendRainmeterCommand("[!SetVariable MinMax " . MinMaxVariable .  "]")
-  }
+  SendRainmeterCommand("[!SetVariable MinMax " . MinMaxVariable .  " wwing]")
 }
 
 CheckForDownloadsInProgress(){
@@ -127,12 +106,12 @@ CheckForDownloadsInProgress(){
   {        
       If (a_LoopFileExt = "part" || a_LoopFileExt = "partial" || a_LoopFileExt = "crdownload")
       {
-          SendRainmeterCommand("[!SetVariable Downloading 1]")
+          SendRainmeterCommand("[!SetVariable Downloading 1 wwing]")
           return
       }
       else
       {
-          SendRainmeterCommand("[!SetVariable Downloading 0]")
+          SendRainmeterCommand("[!SetVariable Downloading 0 wwing]")
       }
   }
 }
