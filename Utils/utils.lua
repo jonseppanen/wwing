@@ -1,5 +1,5 @@
 function Initialize()
-    wwingUserFolder = "c:\\users\\" .. os.getenv("USERNAME") .. "\\wwing\\"
+    wwingUserFolder = os.getenv("USERPROFILE") .. "\\wwing\\"
     userVarsPath = wwingUserFolder .. "variables.inc"
 end
 

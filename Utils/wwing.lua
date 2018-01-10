@@ -1,6 +1,6 @@
 function Initialize()
     defaultVarsPath = SKIN:GetVariable("@") .. "default.inc"
-    wwingUserFolder = "c:\\users\\" .. os.getenv("USERNAME") .. "\\wwing\\"
+    wwingUserFolder = os.getenv("USERPROFILE") .. "\\wwing\\"
     userVarsPath = wwingUserFolder .. "variables.inc"
     if fileExists(userVarsPath) == false then
         return createUserVars(userVarsPath)
