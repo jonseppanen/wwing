@@ -31,6 +31,7 @@ if(!FileExist(UserDir . "\wwing\profile.bmp"))
 return
 
 OpenDownloads(){
+  global UserDir
   If(WinExist(Downloads))
   {
       WinActivate
