@@ -90,6 +90,8 @@ TrayIcon_GetInfo()
 				continue
 			}
 
+			tip := ""
+
 			DllCall("ReadProcessMemory", Ptr, hProc, Ptr, iString, Ptr, &tip, UPtr, szTip, UPtr, 0)
 
 			sToolTip := StrGet(&tip, "UTF-16")
@@ -114,6 +116,8 @@ TrayIcon_GetInfo()
 			oTrayIcon_GetInfo[Index,"Process"] := sProcess
 			oTrayIcon_GetInfo[Index,"Tooltip"] := sToolTip
 			oTrayIcon_GetInfo[Index,"Tray"]    := sTray
+
+			
 
 			if(!iconCheck[hIcon])
 			{
@@ -369,7 +373,7 @@ TrayIcon_ButtonIndex(trayObject, buttonIndex, sButton := "LBUTTONUP")
 	;	idControl := ControlGetHwnd("Button2", "ahk_id " idTrayWindow)
 	;	SendMessage( 0x00F5 ,0,0,,"ahk_id " idControl) 
 		
-	Sleep 20
+	Sleep 100
 	SendMessage(msgID, uID, %sButton%, , "ahk_id " hWnd)
 	;Sleep 50
 	;SendMessage(msgID, uID, %sButton%, , "ahk_id " hWnd)

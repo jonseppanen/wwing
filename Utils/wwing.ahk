@@ -35,17 +35,60 @@ SetTimer "CheckForDownloadsInProgress", 2000
 iconCheck := {}
 trayIconList := {}
 
+systrayCount := 0
+exTrayCount := 0
+
 SetTimer "refreshSystemTray", 2000
 
 refreshSystemTray()
 {
   Global trayIconList
   Global iconTmp
+  Global systrayCount
+  Global exTrayCount
+
   trayIconListCheck := TrayIcon_GetInfo()
   L1Counter := 0
   L2Counter := 0
+
+ /* trayIconListCount := trayIconList ? trayIconList.length() : 0
+  trayIconListCheckCount := trayIconListCheck.length()
+
+  if(trayIconListCount != trayIconListCheckCount)
+    {
+        if(trayIconListCount > trayIconListCheckCount)
+        {
+            Loop (trayIconListCount - trayIconListCheckCount)
+            {
+                SendRainmeterCommand("!SetOption Task" .  (A_Index + trayIconListCheckCount) . " ImageName `"`" ")
+                SendRainmeterCommand("!HideMeter Task" .  (A_Index + trayIconListCheckCount) . " ")
+            }
+        }
+        ShiftDock(trayIconListCount,trayIconListCheckCount)
+    }
+*/
+
   for nTrayIcon in trayIconListCheck
   {
+    if(trayIconListCheck[nTrayIcon,"Process"] = "steam.exe")
+    {
+      SendRainmeterCommand("[!SetOption BtnSteam RightMouseDownAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 16682 " nTrayIcon " 3`"]`"`"`" wwing]")
+      SendRainmeterCommand("[!SetOption BtnSteam RightMouseUpAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 16682 " nTrayIcon " 6`"]`"`"`" wwing]")
+      continue
+    }
+    if(trayIconListCheck[nTrayIcon,"Process"] = "explorer.exe")
+    {
+      if(trayIconListCheck[nTrayIcon,"uID"] = "100" || trayIconListCheck[nTrayIcon,"uID"] = "49486")
+      { 
+        continue
+      }
+      ;else
+     ; {
+     ;   Msgbox trayIconListCheck[nTrayIcon,"Tooltip"] " | " trayIconListCheck[nTrayIcon,"uID"]
+    ;  }
+     
+    }
+
     if(trayIconListCheck[nTrayIcon,"Tray"] = "Shell_TrayWnd")
     {
       L1Counter := L1Counter + 1
@@ -56,7 +99,6 @@ refreshSystemTray()
       L2Counter := L2Counter + 1
       iconSystray := "iconExpandedTray" L2Counter
     }
-    
     
     SendRainmeterCommand("[!SetOption `"" iconSystray "`" Hidden 0 wwing]")
     
@@ -81,17 +123,45 @@ refreshSystemTray()
     if(!trayIconList || trayIconListCheck[nTrayIcon,"Process"] != trayIconList[nTrayIcon,"Process"] || trayIconListCheck[nTrayIcon,"ToolTip"] != trayIconList[nTrayIcon,"ToolTip"])
     {
       SplitPath trayIconListCheck[nTrayIcon].Process , , , , sProcessName
+
+
       redirTooltip := trayIconListCheck[nTrayIcon,"ToolTip"]
-      if(sProcessName = "Explorer" || sProcessName = redirTooltip)
+      if(sProcessName = "Explorer" || trayIconListCheck[nTrayIcon].Process = redirTooltip || sProcessName = redirTooltip)
       {
-        sProcessName := trayIconListCheck[nTrayIcon,"ToolTip"]
+        sProcessName := redirTooltip
         redirTooltip := ""
       }
       SendRainmeterCommand("[!SetOption " iconSystray " MouseOverAction `"`"`"[!SetOption #CURRENTSECTION# SolidColor #vTooltipColor#][!UpdateMeter #CURRENTSECTION#][!Setoption MeterProcess Text `"" sProcessName "`" `"wwing\components\systray`"][!Setoption MeterTooltip Text `"" redirTooltip "`" `"wwing\components\systray`"][!Move `"([#CURRENTSECTION#:X] - ((#vSkinWidth#) / 2 - 24))`" `"40`" `"wwing\components\systray`"][!UpdateMeter `"MeterProcess`" `"wwing\components\systray`"][!UpdateMeter `"MeterTooltip`" `"wwing\components\systray`"][!Redraw `"wwing\components\systray`"][!Show `"wwing\components\systray`"]`"`"`" wwing]")
       SendRainmeterCommand("[!SetOption " iconSystray " MouseLeaveAction `"`"`"[!SetOption #CURRENTSECTION# SolidColor 0,0,0,1][!UpdateMeter #CURRENTSECTION#][!Hide `"wwing\components\systray`"]`"`"`" wwing]")
     }
   }
-  
+
+  if(systrayCount != L1Counter)
+  {
+      if(systrayCount > L1Counter)
+      {
+          Loop (systrayCount - L1Counter)
+          {
+              SendRainmeterCommand("[!HideMeter iconSystray" .  (A_Index + L1Counter) . " wwing]")
+          }
+          SendRainmeterCommand("[!UpdateMeterGroup Level1 wwing]")
+      }
+  }
+
+  if(exTrayCount != L2Counter)
+  {
+      if(exTrayCount > L2Counter)
+      {
+          Loop (exTrayCount - L2Counter)
+          {
+              SendRainmeterCommand("[!HideMeter iconExpandedTray" .  (A_Index + L2Counter) . " wwing]")
+          }
+          SendRainmeterCommand("[!UpdateMeterGroup Level2 wwing]")
+      }
+  }
+
+  systrayCount := L1Counter
+  exTrayCount := L2Counter
   trayIconList := trayIconListCheck  
 }
 
@@ -105,8 +175,6 @@ ClickSystray(wParam, lParam)
   }
   else if(lParam = 2)
   {
-    ;TrayIcon_ButtonIndex(trayIconList,wParam,"M")
-
     SelectedIcon := FileSelect(1, trayIconList[wParam].IconFile, "Select the System Tray Icon for this Process that you wish to replace","(*.png)")
     if(SelectedIcon)
     {
@@ -117,7 +185,6 @@ ClickSystray(wParam, lParam)
         SendRainmeterCommand("[!UpdateMeter iconSystray" nTrayIcon " wwing]")
       }
     }
-    ;Msgbox trayIconList[wParam].IconFile
   }
   else if(lParam = 3)
   {
@@ -132,20 +199,6 @@ ClickSystray(wParam, lParam)
     TrayIcon_ButtonIndex(trayIconList,wParam,"RBUTTONUP")
   }
 }
-/*
-systrayTooltip(wParam, lParam)
-{
-  Global trayIconList
-  if(lParam = 1)
-  {
-    Tooltip trayIconList[wParam].Process
-  }
-  else
-  {
-    Tooltip
-  }
-}
-*/
 
 if(!FileExist(UserDir . "\wwing\profile.bmp"))
 {
