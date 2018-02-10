@@ -73,7 +73,6 @@ ExitFunc()
    Gdip_Shutdown(pToken)
 }
 
-
 TrayIcon_GetInfo()
 {
 	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
@@ -85,23 +84,23 @@ TrayIcon_GetInfo()
 
 	for sTray,trayCall in trayArray
 	{
-		;sTray := "Shell_TrayWnd"
-		;trayCall := "User Promoted Notification Area"
-
+		
 		pidTaskbar := WinGetPID("ahk_class " sTray)		
-
+		trayLookup := ControlGetHwnd(trayCall,"ahk_class " sTray)
+		trayId := "ahk_id " trayLookup
 		hProc := DllCall("OpenProcess", UInt, 0x38, Int, 0, UInt, pidTaskbar)
 		pRB   := DllCall("VirtualAllocEx", Ptr, hProc, Ptr, 0, UPtr, 20, UInt, 0x1000, UInt, 0x4)
 
-		TrayCount := SendMessage(0x418, 0, 0, trayCall, "ahk_class " sTray)   ; TB_BUTTONCOUNT
+		TrayCount := SendMessage(0x418, 0, 0, ,trayId)   ; TB_BUTTONCOUNT
 
 		szBtn := VarSetCapacity(btn, (A_Is64bitOS ? 32 : 20), 0)
 		szNfo := VarSetCapacity(nfo, (A_Is64bitOS ? 32 : 24), 0)
 		szTip := VarSetCapacity(tip, 128 * 2, 0)
-		
+
 		Loop TrayCount
 		{
-			SendMessage(0x417, A_Index - 1, pRB, trayCall, "ahk_class " sTray)   ; TB_GETBUTTON
+			SendMessage(0x417, A_Index - 1, pRB, ,trayId)   ; TB_GETBUTTON
+
 			DllCall("ReadProcessMemory", Ptr, hProc, Ptr, pRB, Ptr, &btn, UPtr, szBtn, UPtr, 0)
 			
 			iBitmap := NumGet(btn, 0, "Int")     
@@ -153,7 +152,6 @@ TrayIcon_GetInfo()
 
 			if(!iconCheck[hIcon])
 			{
-		
 				processIconFolder := TrayIconDir "\" sProcess
 							
 				iconBitmap := Gdip_CreateBitmapFromHICON(hIcon)
@@ -165,23 +163,15 @@ TrayIcon_GetInfo()
 
 				if(!iconBitmap)
 				{
-					if(sProcess = "DiscordPTB.exe")
-					{	
-						iconCheck[hIcon] := processIconFolder "\6ac067679afa62c7fd0b9ae6819653a8.png"
-					}
-					else
-					{
-						iconCheck[hIcon] := processIconFolder "\e35e69ea0dabfb97b82f60f7314fd783.png"
-					}
+
+					iconCheck[hIcon] := A_WorkingDir . "\missing.png"
+					oTrayIcon_GetInfo[Index,"Tooltip"] := oTrayIcon_GetInfo[Index,"Tooltip"] "`r`n`r`n Icon missing - Middle click to replace"
 					return
 				}
 
 				iconPixels := Gdip_GetPixels(iconBitmap)
-
 				iconMD5 := MD5(iconPixels)
-
 				iconCheck[hIcon] := iconMD5
-
 				iconFile := processIconFolder "\" iconMD5 ".png"
 
 				if(!FileExist(iconFile))

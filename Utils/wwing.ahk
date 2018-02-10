@@ -39,6 +39,7 @@ trayIconList := {}
 systrayCount := 0
 exTrayCount := 0
 
+refreshSystemTray()
 SetTimer "refreshSystemTray", 2000
 
 refreshSystemTray()
@@ -49,25 +50,12 @@ refreshSystemTray()
   Global exTrayCount
 
   trayIconListCheck := TrayIcon_GetInfo()
+
   L1Counter := 0
   L2Counter := 0
 
  /* trayIconListCount := trayIconList ? trayIconList.length() : 0
-  trayIconListCheckCount := trayIconListCheck.length()
-
-  if(trayIconListCount != trayIconListCheckCount)
-    {
-        if(trayIconListCount > trayIconListCheckCount)
-        {
-            Loop (trayIconListCount - trayIconListCheckCount)
-            {
-                SendRainmeterCommand("!SetOption Task" .  (A_Index + trayIconListCheckCount) . " ImageName `"`" ")
-                SendRainmeterCommand("!HideMeter Task" .  (A_Index + trayIconListCheckCount) . " ")
-            }
-        }
-        ShiftDock(trayIconListCount,trayIconListCheckCount)
-    }
-*/
+ */
 
   for nTrayIcon in trayIconListCheck
   {
