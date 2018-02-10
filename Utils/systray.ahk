@@ -13,6 +13,7 @@
 ; Update 20160308: Fix for Windows 10 NotifyIconOverflowWindow
 ; Update 20171124: (RiseUp) Added extra Shell_TrayWnd to account for odd numbering (N) in ToolbarWindow32N
 ; Update 20180204: (Ashtefere) Rewrote for AHK V2
+; Update 20180210: (Ashtefere) Rewrote for WWing usage
 ; ----------------------------------------------------------------------------------------------------------------------
 
 ; ----------------------------------------------------------------------------------------------------------------------
@@ -36,8 +37,41 @@
 ; ...............: TB_GETBUTTON message   - http://goo.gl/2oiOsl
 ; ...............: TBBUTTON structure     - http://goo.gl/EIE21Z
 ; ----------------------------------------------------------------------------------------------------------------------
+OnExit("ExitFunc")
 
+Gdip_Startup()
+{
+	Ptr := A_PtrSize ? "UPtr" : "UInt"
+	pToken := 0
 
+	if !DllCall("GetModuleHandle", "str", "gdiplus", Ptr)
+		DllCall("LoadLibrary", "str", "gdiplus")
+	VarSetCapacity(si, A_PtrSize = 8 ? 24 : 16, 0), si := Chr(1)
+	DllCall("gdiplus\GdiplusStartup", A_PtrSize ? "UPtr*" : "uint*", pToken, Ptr, &si, Ptr, 0)
+	return pToken
+}
+
+Gdip_Shutdown(pToken)
+{
+	Ptr := A_PtrSize ? "UPtr" : "UInt"
+
+	DllCall("gdiplus\GdiplusShutdown", Ptr, pToken)
+	if hModule := DllCall("GetModuleHandle", "str", "gdiplus", Ptr)
+		DllCall("FreeLibrary", Ptr, hModule)
+	return 0
+}
+
+If !pToken := Gdip_Startup()
+{
+	MsgBox "Gdiplus failed to start. Please ensure you have gdiplus on your system"
+	ExitApp
+}
+
+ExitFunc()
+{
+   global pToken
+   Gdip_Shutdown(pToken)
+}
 
 
 TrayIcon_GetInfo()
@@ -117,8 +151,6 @@ TrayIcon_GetInfo()
 			oTrayIcon_GetInfo[Index,"Tooltip"] := sToolTip
 			oTrayIcon_GetInfo[Index,"Tray"]    := sTray
 
-			
-
 			if(!iconCheck[hIcon])
 			{
 		
@@ -160,7 +192,17 @@ TrayIcon_GetInfo()
 				iconCheck[hIcon] := iconFile
 			}
 
-			oTrayIcon_GetInfo[Index,"IconFile"] := iconCheck[hIcon]
+			if(sProcess = "wwing.exe")
+			{
+				oTrayIcon_GetInfo[Index,"IconFile"] := A_WorkingDir . "\wwing.png"
+				oTrayIcon_GetInfo[Index,"Tooltip"] := "WingPanel Clone for Windows"
+			}
+			else
+			{
+				oTrayIcon_GetInfo[Index,"IconFile"] := iconCheck[hIcon]
+			}
+
+			
 		}
 	}
 
@@ -213,40 +255,6 @@ MD5(string, case := False)    ; by SKAN | rewritten by jNizM
 	DllCall("FreeLibrary", "Ptr", hModule)
     return o
 } 
-
-Gdip_Startup()
-{
-	Ptr := A_PtrSize ? "UPtr" : "UInt"
-	pToken := 0
-
-	if !DllCall("GetModuleHandle", "str", "gdiplus", Ptr)
-		DllCall("LoadLibrary", "str", "gdiplus")
-	VarSetCapacity(si, A_PtrSize = 8 ? 24 : 16, 0), si := Chr(1)
-	DllCall("gdiplus\GdiplusStartup", A_PtrSize ? "UPtr*" : "uint*", pToken, Ptr, &si, Ptr, 0)
-	return pToken
-}
-Gdip_Shutdown(pToken)
-{
-	Ptr := A_PtrSize ? "UPtr" : "UInt"
-
-	DllCall("gdiplus\GdiplusShutdown", Ptr, pToken)
-	if hModule := DllCall("GetModuleHandle", "str", "gdiplus", Ptr)
-		DllCall("FreeLibrary", Ptr, hModule)
-	return 0
-}
-
-If !pToken := Gdip_Startup()
-{
-	MsgBox "Gdiplus failed to start. Please ensure you have gdiplus on your system"
-	ExitApp
-}
-OnExit("ExitFunc")
-
-ExitFunc()
-{
-   global pToken
-   Gdip_Shutdown(pToken)
-}
 
 SaveHICONtoRainmeter(hicon, iconFile, icoMD5)
 {
@@ -373,7 +381,7 @@ TrayIcon_ButtonIndex(trayObject, buttonIndex, sButton := "LBUTTONUP")
 	;	idControl := ControlGetHwnd("Button2", "ahk_id " idTrayWindow)
 	;	SendMessage( 0x00F5 ,0,0,,"ahk_id " idControl) 
 		
-	Sleep 100
+	Sleep 20
 	SendMessage(msgID, uID, %sButton%, , "ahk_id " hWnd)
 	;Sleep 50
 	;SendMessage(msgID, uID, %sButton%, , "ahk_id " hWnd)

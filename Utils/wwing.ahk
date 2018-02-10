@@ -2,6 +2,7 @@
 SendMode Input
 SetTitleMatchMode "RegEx"
 #SingleInstance force
+TraySetIcon(A_WorkingDir . "\wwing.ico")
 
 SendRainmeterCommand("[!SetVariable AHKVersion " . A_AhkVersion . " wwing]")
 SendRainmeterCommand("[!UpdateMeasure MeasureWindowMessage wwing]")
