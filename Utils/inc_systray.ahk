@@ -1,3 +1,5 @@
+systrayPID := 0
+
 TrayIcon_GetInfo()
 {
 	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
@@ -6,13 +8,14 @@ TrayIcon_GetInfo()
 	Global trayIconDir
 	Global systemTrayData
 	Global trayReading
+	Global systrayPID
 
 	trayArray := {"Shell_TrayWnd":"User Promoted Notification Area","NotifyIconOverflowWindow":"Overflow Notification Area"}
 
 	for sTray,trayCall in trayArray
 	{
-		
 		pidTaskbar := WinGetPID("ahk_class " sTray)		
+		systrayPID := pidTaskbar
 		trayLookup := ControlGetHwnd(trayCall,"ahk_class " sTray)
 		trayId := "ahk_id " trayLookup
 		hProc := DllCall("OpenProcess", UInt, 0x38, Int, 0, UInt, pidTaskbar)
@@ -32,7 +35,7 @@ TrayIcon_GetInfo()
 
 			DllCall("ReadProcessMemory", Ptr, hProc, Ptr, pRB, Ptr, &btn, UPtr, szBtn, UPtr, 0)
 
-			iBitmap := NumGet(btn, 0, "Int")     
+			;iBitmap := NumGet(btn, 0, "Int")     
 			;IDcmd   := NumGet(btn, 4, "Int")
 			;statyle := NumGet(btn, 8)
 			dwData  := NumGet(btn, (A_Is64bitOS ? 16 : 12))
@@ -140,16 +143,25 @@ TrayIcon_GetInfo()
 			}
 			
 		}
-
 		if(systemTrayData[sTray].length() > Index)
 		{
-			systemTrayData[sTray].RemoveAt(Index , (systemTrayData[sTray].length() - Index))
-		}
+			systemTrayData[sTray].RemoveAt((Index + 1), (systemTrayData[sTray].length() - Index))
+		}		
+		
 	}
 
-	DllCall("VirtualFreeEx", Ptr, hProc, Ptr, pProc, UPtr, 0, Uint, 0x8000)
+	btn := ""
+	nfo := ""
+	tip := ""
+	DllCall("VirtualFreeEx", Ptr, pRB, Ptr, hProc, Ptr, pProc, UPtr, 0, Uint, 0x8000)
 	DllCall("CloseHandle", Ptr, hProc)
 	DetectHiddenWindows Setting_A_DetectHiddenWindows
+}
+
+cleanSystrayMemory()
+{
+	Global systrayPID
+	EmptyMem(systrayPID)
 }
 
 renderSystrayIconTheme(workFile,renderTo)
@@ -164,7 +176,7 @@ updateCache(cacheObject,cacheString)
 {
 	if(!cacheObject["cache" cacheString] || cacheObject[cacheString] != cacheObject["cache" cacheString] )
 	{
-		cacheObject["cache" cacheString] = cacheObject[cacheString]
+		cacheObject["cache" cacheString] := cacheObject[cacheString]
 		return True
 	}
 }
@@ -188,7 +200,7 @@ refreshSystemTray()
 		TrayIndex := A_Index
 		iconString := rainIconName[TrayIndex]
 		TrayIconMax := 0
-
+	
 		for nTrayIcon in systemTrayData[sTray]
 		{	
 			iconSystray := iconString nTrayIcon		

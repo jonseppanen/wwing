@@ -33,10 +33,12 @@ OnMessage(16683, "OpenNotifications")
 OnMessage(16682, "SystrayClickNormal")
 OnMessage(16681, "SystrayClickExtended")
 
+SetTimerAndFire("cleanSystrayMemory",30000)
 SetTimerAndFire("CheckForMaxedWindow", 150)
 SetTimerAndFire("CheckForDownloadsInProgress", 2000)
 SetTimerAndFire("TrayIcon_GetInfo", 250)
 SetTimer("refreshSystemTray", 250)
+
 
 showBackBar()
 {
