@@ -66,7 +66,7 @@ Gdip_GetPixels(pBitmap, size:=16)
 SaveHICONtoRainmeter(hicon, iconFile, icoMD5)
 {
 	workFile := EnvGet("TMP") "\wwing\" icoMD5 ".ico"
-	FileDelete iconFile
+	;FileDelete iconFile
 	SaveHICONtoFile( hicon, workFile )
 
 	while(!FileExist(workFile))

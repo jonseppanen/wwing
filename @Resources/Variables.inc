@@ -31,4 +31,6 @@ vLargeHeadingSize=28
 sLevel1Y=0
 sLevel2Y=-40
 vWWingUserDir = %USERPROFILE%\wwing\
+iconStyleSystray2 = sStyleIcon | sRightAlign | styleSystrayIcon | sLevel1
+iconStyleSystray1 = sStyleIcon | sRightAlign | styleSystrayIcon | sLevel2
 
