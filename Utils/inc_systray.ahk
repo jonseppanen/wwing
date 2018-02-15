@@ -8,7 +8,6 @@ TrayIcon_GetInfo()
 	}	
 	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
 	
-	;systemTrayData := {}
 	Global iconCheck
 	Global trayIconDir
 	Global systemTrayData
@@ -41,6 +40,7 @@ TrayIcon_GetInfo()
 		
 		Loop TrayCount
 		{
+			
 			SendMessage(0x417, A_Index - 1, pRB, ,trayId)   ; TB_GETBUTTON
 			DllCall("ReadProcessMemory", Ptr, hProc, Ptr, pRB, Ptr, &btn, UPtr, szBtn, UPtr, 0)
 
@@ -58,10 +58,10 @@ TrayIcon_GetInfo()
 			hIcon := NumGet(nfo, (A_Is64bitOS ? 24 : 20), "Ptr")
 
 			sProcess :=  WinGetProcessName("ahk_id " hWnd)
-
-			if(!hWnd)
+			
+			if(hWnd == "0")
 			{
-				PostMessage(0x12, 0, 0, , "ahk_id " explorerProcess)
+				PostMessage(0x12, 0, 0, , "Program Manager")
 				Sleep 250
 				return
 			}
@@ -108,7 +108,6 @@ TrayIcon_GetInfo()
 			}
 
 			Index := Index + 1					
-			;Index := (systemTrayData.MaxIndex()>0 ? systemTrayData.MaxIndex()+1 : 1)
 			;systemTrayData[sTray,Index,"idx"]     := A_Index - 1
 			;systemTrayData[sTray,Index,"IDcmd"]   := IDcmd
 			systemTrayData[sTray,Index,"uID"]     := uID
@@ -118,9 +117,7 @@ TrayIcon_GetInfo()
 			systemTrayData[sTray,Index,"Process"] := sProcess
 			systemTrayData[sTray,Index,"Tooltip"] := sToolTip
 			systemTrayData[sTray,Index,"Tray"]    := sTray
-
-			
-			
+	
 			if(!iconCheck[hIcon])
 			{
 				processIconFolder := dirCheck(TrayIconDir "\" sProcess)
