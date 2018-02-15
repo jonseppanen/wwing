@@ -2,7 +2,12 @@ systrayPID := 0
 
 TrayIcon_GetInfo()
 {
+	if(AppVisibility)
+	{
+		return
+	}	
 	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
+	
 	;systemTrayData := {}
 	Global iconCheck
 	Global trayIconDir
@@ -11,6 +16,7 @@ TrayIcon_GetInfo()
 	Global systrayPID
 
 	trayArray := {"Shell_TrayWnd":"User Promoted Notification Area","NotifyIconOverflowWindow":"Overflow Notification Area"}
+	explorerProcess := WingetPid("Program Manager")
 
 	for sTray,trayCall in trayArray
 	{
@@ -25,7 +31,14 @@ TrayIcon_GetInfo()
 		szNfo := VarSetCapacity(nfo, (A_Is64bitOS ? 32 : 24), 0)
 		szTip := VarSetCapacity(tip, 128 * 2, 0)
 		Index := 0
-
+		
+		if(!explorerProcess)
+		{
+			Run "explorer.exe"
+			Sleep 500
+			return
+		}
+		
 		Loop TrayCount
 		{
 			SendMessage(0x417, A_Index - 1, pRB, ,trayId)   ; TB_GETBUTTON
@@ -48,13 +61,11 @@ TrayIcon_GetInfo()
 
 			if(!hWnd)
 			{
-				PostMessage(0x12, 0, 0, , trayId)
-				Sleep 250
-				Run "explorer.exe"
+				PostMessage(0x12, 0, 0, , "ahk_id " explorerProcess)
 				Sleep 250
 				return
 			}
-			
+
 			if(!sProcess)
 			{
 				continue
