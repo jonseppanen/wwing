@@ -1,11 +1,13 @@
 systrayPID := 0
-
+#WinActivateForce
 TrayIcon_GetInfo()
 {
-	if(AppVisibility)
+	Global AppVisibility
+	if( (DllCall(NumGet(NumGet(AppVisibility+0)+4*A_PtrSize), "Ptr", AppVisibility, "Int*", fVisible) >= 0) && fVisible = 1 )
 	{
-		return
+		return true
 	}	
+
 	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
 	
 	Global iconCheck
@@ -15,6 +17,7 @@ TrayIcon_GetInfo()
 	Global systrayPID
 
 	trayArray := {"Shell_TrayWnd":"User Promoted Notification Area","NotifyIconOverflowWindow":"Overflow Notification Area"}
+	active_id := WinGetID("A")
 	explorerProcess := WingetPid("Program Manager")
 
 	for sTray,trayCall in trayArray
@@ -32,9 +35,16 @@ TrayIcon_GetInfo()
 		Index := 0
 		
 		if(!explorerProcess)
-		{
-			Run "explorer.exe"
-			Sleep 500
+		{	;yes, the below repetition is seriously really necessary.
+			Run "explorer.exe",,"Hide"
+			WinActivate "ahk_id " active_id
+			WinActivate "ahk_id " active_id
+			WinActivate "ahk_id " active_id
+			WinActivate "ahk_id " active_id
+			WinActivate "ahk_id " active_id
+			WinActivate "ahk_id " active_id
+			Sleep 350
+			WinActivate "ahk_id " active_id
 			return
 		}
 		
@@ -63,6 +73,8 @@ TrayIcon_GetInfo()
 			{
 				PostMessage(0x12, 0, 0, , "Program Manager")
 				Sleep 250
+				OutputVar := ProcessClose(explorerProcess)
+				Sleep 150
 				return
 			}
 
