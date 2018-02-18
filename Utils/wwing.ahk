@@ -16,11 +16,8 @@ iconCheck := {}
 trayIconList := {}
 lastMinMax := 0
 systrayCount := 0
-exTrayCount := 0
-trayReading := 0
 systemTrayData := {}
-
-
+isStartOpen := false
 
 #Include inc_graphics.ahk
 #Include inc_lib.ahk
@@ -37,8 +34,38 @@ SetTimerAndFire("cleanSystrayMemory",30000)
 SetTimerAndFire("CheckForMaxedWindow", 150)
 SetTimerAndFire("CheckForDownloadsInProgress", 2000)
 SetTimerAndFire("TrayIcon_GetInfo", 250)
+SetTimer("startMenuCheck", 150)
 SetTimer("refreshSystemTray", 250)
 
+startMenuCheck()
+{
+  Global isStartOpen
+  Global AppVisibility
+  ;if( (DllCall(NumGet(NumGet(AppVisibility+0)+4*A_PtrSize), "Ptr", AppVisibility, "Int*", fVisible) >= 0) && fVisible = 1 )
+  startMenuOpenCheck := isStartOpen
+
+  if(WinGetTitle("A") = "Cortana" && WinGetClass("A") = "Windows.UI.Core.CoreWindow")
+  {
+    isStartOpen := true
+  }
+  else
+  {
+    isStartOpen := false
+  }
+
+  if(isStartOpen != startMenuOpenCheck)
+  {
+    if(isStartOpen = true)
+    {
+      SendRainmeterCommand("[!HideMeterGroup groupStart wwing][!ShowMeterGroup groupSearch wwing]")
+    }
+    else
+    {
+      SendRainmeterCommand("[!HideMeterGroup groupSearch wwing][!ShowMeterGroup groupStart wwing]")
+    }
+  }
+}
+    
 
 showBackBar()
 {

@@ -88,11 +88,12 @@ OpenDownloads(){
 }
 
 OpenSearch(){
+  Global isStartOpen := true
   send "#s"
 }
 
 OpenStart(){
-  SendRainmeterCommand("[!SetVariable MinMax 1 wwing]")
+  Global isStartOpen := true
   sendinput "{LWin}"
 }
 

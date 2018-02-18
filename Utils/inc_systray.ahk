@@ -1,27 +1,35 @@
 systrayPID := 0
+fuckingtest := 0
 #WinActivateForce
 TrayIcon_GetInfo()
 {
-	Global AppVisibility
-	if( (DllCall(NumGet(NumGet(AppVisibility+0)+4*A_PtrSize), "Ptr", AppVisibility, "Int*", fVisible) >= 0) && fVisible = 1 )
+	Global isStartOpen
+	if(isStartOpen = true)
 	{
-		return true
-	}	
-
+		return
+	}
+	
 	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
 	
 	Global iconCheck
 	Global trayIconDir
 	Global systemTrayData
-	Global trayReading
 	Global systrayPID
 
 	trayArray := {"Shell_TrayWnd":"User Promoted Notification Area","NotifyIconOverflowWindow":"Overflow Notification Area"}
 	active_id := WinGetID("A")
-	explorerProcess := WingetPid("Program Manager")
+	
 
 	for sTray,trayCall in trayArray
 	{
+		
+		if(isStartOpen = true)
+		{
+			DetectHiddenWindows Setting_A_DetectHiddenWindows
+			return
+		}
+		
+		explorerProcess := WingetPid("Program Manager")
 		pidTaskbar := WinGetPID("ahk_class " sTray)		
 		systrayPID := pidTaskbar
 		trayLookup := ControlGetHwnd(trayCall,"ahk_class " sTray)
@@ -113,10 +121,15 @@ TrayIcon_GetInfo()
 				{ 
 					continue
 				}
-				;else
-			;	{
-					;Msgbox systemTrayData[sTray,nTrayIcon,"Tooltip"] " | " systemTrayData[sTray,nTrayIcon,"uID"]
-			;	}
+				else if(SubStr(uID, 1, 2) = "49")
+				{
+					word_array := StrSplit(TestString, A_Space, ".")
+					;vNew := StrReplace(sTooltip, "`n" , "Donkey", OutputVarCount)
+					Array := StrSplit(sTooltip , "`n")
+					SendRainmeterCommand("[!SetVariable ifSSID `" @ " Array[1] "`"  wwing\components\network]")
+					SendRainmeterCommand("[!SetVariable ifInternet `"" Array[2] "`"  wwing\components\network]")
+					continue
+				}
 			}
 
 			Index := Index + 1					
@@ -359,10 +372,17 @@ SendSystrayClick(trayObject, buttonIndex, sButton := "LBUTTONUP")
 	msgID  := systemTrayData[trayObject,buttonIndex].msgID
 	uID    := systemTrayData[trayObject,buttonIndex].uID
 	hWnd   := systemTrayData[trayObject,buttonIndex].hWnd
-		
-	Sleep 30
-	SendMessage(msgID, uID, %sButton%, , "ahk_id " hWnd)
 
+	if(systemTrayData[trayObject,buttonIndex].Tooltip = "Safely Remove Hardware and Eject Media" && (sButton := "WM_LBUTTONUP" || sButton := "WM_RBUTTONUP"))
+	{
+		Run "RunDll32.exe shell32.dll,Control_RunDLL hotplug.dll"
+	}
+	else
+	{
+		Sleep 30
+		SendMessage(msgID, uID, %sButton%, , "ahk_id " hWnd)
+	}
+		
 	DetectHiddenWindows Setting_A_DetectHiddenWindows
 	return
 }
