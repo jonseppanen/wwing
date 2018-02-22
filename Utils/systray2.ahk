@@ -1,338 +1,63 @@
-; ----------------------------------------------------------------------------------------------------------------------
-; Name ..........: TrayIcon library
-; Description ...: Provide some useful functions to deal with Tray icons.
-; AHK Version ...: AHK_L 1.1.22.02 x32/64 Unicode
-; Original Author: Sean (http://goo.gl/dh0xIX) (http://www.autohotkey.com/forum/viewtopic.php?t=17314)
-; Update Author .: Cyruz (http://ciroprincipe.info) (http://ahkscript.org/boards/viewtopic.php?f=6&t=1229)
-; Mod Authors ...: Fanatic Guru, RiseUp
-; License .......: WTFPL - http://www.wtfpl.net/txt/copying/
-; Version Date...: 2017 - 11 - 24
-; Note ..........: Many people have updated Sean's original work including me but Cyruz's version seemed the most straight
-; ...............: forward update for 64 bit so I adapted it with some of the features from my Fanatic Guru version.
-; Update 20160120: Went through all the data types in the DLL and NumGet and matched them up to MSDN which fixed IDcmd.
-; Update 20160308: Fix for Windows 10 NotifyIconOverflowWindow
-; Update 20171124: (RiseUp) Added extra Shell_TrayWnd to account for odd numbering (N) in ToolbarWindow32N
-; Update 20180204: (Ashtefere) Rewrote for AHK V2
-; ----------------------------------------------------------------------------------------------------------------------
+iVirtualDesktopManager := ComObjCreate("{aa509086-5ca9-4c25-8f95-589d3c07b48a}", "{a5cd92ff-29be-454c-8d04-d82879fb3f1b}")
 
-; ----------------------------------------------------------------------------------------------------------------------
-; Function ......: TrayIcon_GetInfo
-; Description ...: Get a series of useful information about tray icons.
-; Parameters ....: sExeName  - The exe for which we are searching the tray icon data. Leave it empty to receive data for 
-; ...............:             all tray icons.
-; Return ........: oTrayIcon_GetInfo - An array of objects containing tray icons data. Any entry is structured like this:
-; ...............:             oTrayIcon_GetInfo[A_Index].idx     - 0 based tray icon index.
-; ...............:             oTrayIcon_GetInfo[A_Index].IDcmd   - Command identifier associated with the button.
-; ...............:             oTrayIcon_GetInfo[A_Index].pID     - Process ID.
-; ...............:             oTrayIcon_GetInfo[A_Index].uID     - Application defined identifier for the icon.
-; ...............:             oTrayIcon_GetInfo[A_Index].msgID   - Application defined callback message.
-; ...............:             oTrayIcon_GetInfo[A_Index].hIcon   - Handle to the tray icon.
-; ...............:             oTrayIcon_GetInfo[A_Index].hWnd    - Window handle.
-; ...............:             oTrayIcon_GetInfo[A_Index].Class   - Window class.
-; ...............:             oTrayIcon_GetInfo[A_Index].Process - Process executable.
-; ...............:             oTrayIcon_GetInfo[A_Index].Tray    - Tray Type (Shell_TrayWnd or NotifyIconOverflowWindow).
-; ...............:             oTrayIcon_GetInfo[A_Index].tooltip - Tray icon tooltip.
-; Info ..........: TB_BUTTONCOUNT message - http://goo.gl/DVxpsg
-; ...............: TB_GETBUTTON message   - http://goo.gl/2oiOsl
-; ...............: TBBUTTON structure     - http://goo.gl/EIE21Z
-; ----------------------------------------------------------------------------------------------------------------------
-
-
-
-/*
-If !pToken := Gdip_Startup()
+Guid_ToStr(ByRef VarOrAddress)
 {
-	MsgBox "Gdiplus failed to start. Please ensure you have gdiplus on your system"
-	ExitApp
-}
-OnExit("ExitFunc")
-ExitFunc()
-{
-   global
-   ; gdi+ may now be shutdown on exiting the program
-   Gdip_Shutdown(pToken)
-}
-*/
-
-createHBitmapFromHIcon(hIcon)
-{
-	return Gdip_CreateHBITMAPFromBitmap(Gdip_CreateBitmapFromHICON(hIcon))
-}
-Gdip_CreateHBITMAPFromBitmap(pBitmap, Background:=0xffffffff)
-{
-	DllCall("gdiplus\GdipCreateHBITMAPFromBitmap", A_PtrSize ? "UPtr" : "UInt", pBitmap, A_PtrSize ? "UPtr*" : "uint*", hbm, "int", Background)
-	return hbm
+	pGuid := IsByRef(VarOrAddress) ? &VarOrAddress : VarOrAddress
+	VarSetCapacity(sGuid, 78) ; (38 + 1) * 2
+	if !DllCall("ole32\StringFromGUID2", "Ptr", pGuid, "Ptr", &sGuid, "Int", 39)
+		throw Exception("Invalid GUID", -1, Format("<at {1:p}>", pGuid))
+	return StrGet(&sGuid, "UTF-16")
 }
 
-
-SaveHBITMAPToFile(hBitmap, sFile)
+getWindowDesktopId(hWnd) 
 {
-	;sFile := GetValidFilePath(sFile)
-	VarSetCapacity(DIBSECTION, A_PtrSize=8? 104:84, 0)
-	NumPut(40, DIBSECTION, A_PtrSize=8? 32:24,"UInt")	;dsBmih.biSize
-	DllCall("GetObject", "UPTR", hBitmap, "int", A_PtrSize=8? 104:84, "UPTR", &DIBSECTION)
-	hFile:=	DllCall("CreateFile", "UPTR", &sFile, "Uint", 0x40000000, "Uint", 0, "Uint", 0, "Uint", 2, "Uint", 0, "Uint", 0)
-	DllCall("WriteFile", "UPTR", hFile, "int64P", 0x4D42|14+40+(biSizeImage:=NumGet(DIBSECTION, A_PtrSize=8? 52:44, "UInt"))<<16, "Uint", 6, "UintP", 0, "Uint", 0)
-	DllCall("WriteFile", "UPTR", hFile, "int64P", 54<<32, "Uint", 8, "UintP", 0, "Uint", 0)
-	DllCall("WriteFile", "UPTR", hFile, "UPTR", &DIBSECTION + (A_PtrSize=8? 32:24), "Uint", 40, "UintP", 0, "Uint", 0)
-	DllCall("WriteFile", "UPTR", hFile, "Uint", NumGet(DIBSECTION, A_PtrSize=8? 24:20, "UPtr"), "Uint", biSizeImage, "UintP", 0, "Uint", 0)
-	DllCall("CloseHandle", "UPTR", hFile)
+	Global iVirtualDesktopManager
+	
+	desktopId := ""
+	VarSetCapacity(desktopID, 16, 0)
+
+	Error := DllCall(NumGet(NumGet(iVirtualDesktopManager+0), 4*A_PtrSize), "Ptr", iVirtualDesktopManager, "Ptr", hWnd, "Ptr", &desktopID)			
+	return &desktopID
 }
 
-
-
-TrayIcon_GetInfo(sExeName := "")
+getCurrentDesktopId()
 {
-	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
-	oTrayIcon_GetInfo := {}
-	For key, sTray in ["NotifyIconOverflowWindow", "Shell_TrayWnd", "Shell_TrayWnd"]
+	return SubStr(RegExReplace(Guid_ToStr(getWindowDesktopId(WinGetId("A"))), "[-{}]"), 17)
+}
+
+listDesktops()
+{
+	regIdLength := 32
+	DesktopList := RegRead("HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VirtualDesktops", "VirtualDesktopIDs")	
+	desktops := []
+	while true
 	{
-		
-        idxTB := TrayIcon_GetTrayBar()
-		pidTaskbar := WinGetPID("ahk_class " sTray)
-
-		
-
-		hProc := DllCall("OpenProcess", UInt, 0x38, Int, 0, UInt, pidTaskbar)
-		pRB   := DllCall("VirtualAllocEx", Ptr, hProc, Ptr, 0, UPtr, 20, UInt, 0x1000, UInt, 0x4)
-
-		if (SubStr(A_OSVersion,1,2)=10)
-        {
-            TrayCount := SendMessage(0x418, 0, 0, "ToolbarWindow32" . key, "ahk_class " sTray)   ; TB_BUTTONCOUNT
-        }
-		else
-        {	
-			TrayCount := SendMessage(0x418, 0, 0, "ToolbarWindow32" . idxTB, "ahk_class " sTray)   ; TB_BUTTONCOUNT
-        }
-        
-		
-		szBtn := VarSetCapacity(btn, (A_Is64bitOS ? 32 : 20), 0)
-		szNfo := VarSetCapacity(nfo, (A_Is64bitOS ? 32 : 24), 0)
-		szTip := VarSetCapacity(tip, 128 * 2, 0)
-
-
-		
-		Loop TrayCount
+		desktopId := SubStr(DesktopList, ((A_index-1) * regIdLength) + 1, regIdLength)
+		if(desktopId) 
 		{
-			if (SubStr(A_OSVersion,1,2)=10)
-            {
-                SendMessage(0x417, A_Index - 1, pRB, "ToolbarWindow32" key, "ahk_class " sTray)   ; TB_GETBUTTON
-            }
-			else
-            {
-                SendMessage(0x417, A_Index - 1, pRB, "ToolbarWindow32" idxTB, "ahk_class " sTray)   ; TB_GETBUTTON
-            }
-            
-
-			DllCall("ReadProcessMemory", Ptr, hProc, Ptr, pRB, Ptr, &btn, UPtr, szBtn, UPtr, 0)
-            
-			iBitmap := NumGet(btn, 0, "Int")     
-			IDcmd   := NumGet(btn, 4, "Int")
-			statyle := NumGet(btn, 8)
-			dwData  := NumGet(btn, (A_Is64bitOS ? 16 : 12))
-			iString := NumGet(btn, (A_Is64bitOS ? 24 : 16), "Ptr")
-
-			DllCall("ReadProcessMemory", Ptr, hProc, Ptr, dwData, Ptr, &nfo, UPtr, szNfo, UPtr, 0)
-
-			hWnd  := NumGet(nfo, 0, "Ptr")
-			uID   := NumGet(nfo, (A_Is64bitOS ? 8 : 4), "UInt")
-			msgID := NumGet(nfo, (A_Is64bitOS ? 12 : 8))
-			hIcon := NumGet(nfo, (A_Is64bitOS ? 24 : 20), "Ptr")
-
-			pID := WinGetPID("ahk_id " hWnd)
-			sProcess :=  WinGetProcessName("ahk_id " hWnd)
-			sClass :=  WinGetClass("ahk_id " hWnd)
-
-			If(!sExeName || (sExeName = sProcess) || (sExeName = pID))
-			{
-				DllCall("ReadProcessMemory", Ptr, hProc, Ptr, iString, Ptr, &tip, UPtr, szTip, UPtr, 0)
-				Index := (oTrayIcon_GetInfo.MaxIndex()>0 ? oTrayIcon_GetInfo.MaxIndex()+1 : 1)
-				oTrayIcon_GetInfo[Index,"idx"]     := A_Index - 1
-				oTrayIcon_GetInfo[Index,"IDcmd"]   := IDcmd
-				oTrayIcon_GetInfo[Index,"pID"]     := pID
-				oTrayIcon_GetInfo[Index,"uID"]     := uID
-				oTrayIcon_GetInfo[Index,"msgID"]   := msgID
-				oTrayIcon_GetInfo[Index,"hIcon"]   := hIcon
-				oTrayIcon_GetInfo[Index,"hWnd"]    := hWnd
-				oTrayIcon_GetInfo[Index,"Class"]   := sClass
-				oTrayIcon_GetInfo[Index,"Process"] := sProcess
-				oTrayIcon_GetInfo[Index,"Tooltip"] := StrGet(&tip, "UTF-16")
-				oTrayIcon_GetInfo[Index,"Tray"]    := sTray
-			}
+			MsgBox SubStr(desktopId, 17)
+			desktops.push(SubStr(desktopId, 17))
+		} 
+		else
+		{
+			break
 		}
-		DllCall("VirtualFreeEx", Ptr, hProc, Ptr, pProc, UPtr, 0, Uint, 0x8000)
-		DllCall("CloseHandle", Ptr, hProc)
 	}
-	DetectHiddenWindows Setting_A_DetectHiddenWindows
-	Return oTrayIcon_GetInfo
-}
+	return desktops
+}	
 
-; ----------------------------------------------------------------------------------------------------------------------
-; Function .....: TrayIcon_Hide
-; Description ..: Hide or unhide a tray icon.
-; Parameters ...: IDcmd - Command identifier associated with the button.
-; ..............: bHide - True for hide, False for unhide.
-; ..............: sTray - 1 or Shell_TrayWnd || 0 or NotifyIconOverflowWindow.
-; Info .........: TB_HIDEBUTTON message - http://goo.gl/oelsAa
-; ----------------------------------------------------------------------------------------------------------------------
-TrayIcon_Hide(IDcmd, sTray := "Shell_TrayWnd", bHide:=True)
+indexOf(obj, item)
 {
-	(sTray == 0 ? sTray := "NotifyIconOverflowWindow" : sTray == 1 ? sTray := "Shell_TrayWnd" : sTray)
-	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
-	idxTB := TrayIcon_GetTrayBar()
-	SendMessage(0x404, IDcmd, bHide, "ToolbarWindow32" idxTB, "ahk_class " sTray) ; TB_HIDEBUTTON
-	SendMessage(0x1A, 0, 0, , "ahk_class " sTray)
-	DetectHiddenWindows Setting_A_DetectHiddenWindows
-}
-
-; ----------------------------------------------------------------------------------------------------------------------
-; Function .....: TrayIcon_Delete
-; Description ..: Delete a tray icon.
-; Parameters ...: idx - 0 based tray icon index.
-; ..............: sTray - 1 or Shell_TrayWnd || 0 or NotifyIconOverflowWindow.
-; Info .........: TB_DELETEBUTTON message - http://goo.gl/L0pY4R
-; ----------------------------------------------------------------------------------------------------------------------
-TrayIcon_Delete(idx, sTray := "Shell_TrayWnd")
-{
-	(sTray == 0 ? sTray := "NotifyIconOverflowWindow" : sTray == 1 ? sTray := "Shell_TrayWnd" : sTray)
-	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
-	idxTB := TrayIcon_GetTrayBar()
-	SendMessage(0x416, idx, 0, "ToolbarWindow32" idxTB, "ahk_class " sTray ) ; TB_DELETEBUTTON
-	SendMessage(0x1A, 0, 0, , "ahk_class " sTray)
-	DetectHiddenWindows Setting_A_DetectHiddenWindows
-}
-
-; ----------------------------------------------------------------------------------------------------------------------
-; Function .....: TrayIcon_Remove
-; Description ..: Remove a tray icon.
-; Parameters ...: hWnd, uID.
-; ----------------------------------------------------------------------------------------------------------------------
-TrayIcon_Remove(hWnd, uID)
-{
-		NumPut(VarSetCapacity(NID,(A_IsUnicode ? 2 : 1) * 384 + A_PtrSize * 5 + 40,0), NID)
-		NumPut(hWnd , NID, (A_PtrSize == 4 ? 4 : 8 ))
-		NumPut(uID  , NID, (A_PtrSize == 4 ? 8  : 16 ))
-		Return DllCall("shell32\Shell_NotifyIcon", "Uint", 0x2, "Uint", &NID)
-}
-
-; ----------------------------------------------------------------------------------------------------------------------
-; Function .....: TrayIcon_Move
-; Description ..: Move a tray icon.
-; Parameters ...: idxOld - 0 based index of the tray icon to move.
-; ..............: idxNew - 0 based index where to move the tray icon.
-; ..............: sTray - 1 or Shell_TrayWnd || 0 or NotifyIconOverflowWindow.
-; Info .........: TB_MOVEBUTTON message - http://goo.gl/1F6wPw
-; ----------------------------------------------------------------------------------------------------------------------
-TrayIcon_Move(idxOld, idxNew, sTray := "Shell_TrayWnd")
-{
-	(sTray == 0 ? sTray := "NotifyIconOverflowWindow" : sTray == 1 ? sTray := "Shell_TrayWnd" :  sTray)
-	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
-	idxTB := TrayIcon_GetTrayBar()
-	SendMessage(0x452, idxOld, idxNew,"ToolbarWindow32" idxTB, "ahk_class " sTray) ; TB_MOVEBUTTON
-	DetectHiddenWindows Setting_A_DetectHiddenWindows
-}
-
-; ----------------------------------------------------------------------------------------------------------------------
-; Function .....: TrayIcon_GetTrayBar
-; Description ..: Get the tray icon handle.
-; ----------------------------------------------------------------------------------------------------------------------
-TrayIcon_GetTrayBar()
-{
-	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
-	ControlList := ControlGetList("ahk_class Shell_TrayWnd")
-	RegExMatch(ControlList, "(?<=ToolbarWindow32)\d+(?!.*ToolbarWindow32)", nTB)
-	Loop nTB
-	{
-		hWnd := ControlGethWnd("ToolbarWindow32 " A_Index, "ahk_class Shell_TrayWnd")
-		hParent := DllCall( "GetParent", Ptr, hWnd )
-		sClass := WinGetClass("ahk_id " hParent)
-		If (sClass <> "SysPager")
-			Continue
-		idxTB := A_Index
-		Break
+	for i, val in obj {
+		if (val = item)
+		{
+			return i
+		}
 	}
-	DetectHiddenWindows Setting_A_DetectHiddenWindows
-	Return  idxTB
 }
 
-; ----------------------------------------------------------------------------------------------------------------------
-; Function .....: TrayIcon_GetHotItem
-; Description ..: Get the index of tray's hot item.
-; Info .........: TB_GETHOTITEM message - http://goo.gl/g70qO2
-; ----------------------------------------------------------------------------------------------------------------------
-TrayIcon_GetHotItem()
-{
-	idxTB := TrayIcon_GetTrayBar()
-	SendMessage(0x447, 0, 0, "ToolbarWindow32" idxTB, "ahk_class Shell_TrayWnd") ; TB_GETHOTITEM
-	Return ErrorLevel << 32 >> 32
-}
+desktops := listDesktops()
 
-; ----------------------------------------------------------------------------------------------------------------------
-; Function .....: TrayIcon_Button
-; Description ..: Simulate mouse button click on a tray icon.
-; Parameters ...: sExeName - Executable Process Name of tray icon.
-; ..............: sButton  - Mouse button to simulate (L, M, R).
-; ..............: bDouble  - True to double click, false to single click.
-; ..............: index    - Index of tray icon to click if more than one match.
-; ----------------------------------------------------------------------------------------------------------------------
-TrayIcon_Button(sExeName, sButton := "L", bDouble := false, index := 1)
-{
-	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
-	WM_MOUSEMOVE	  := 0x0200
-	WM_LBUTTONDOWN	  := 0x0201
-	WM_LBUTTONUP	  := 0x0202
-	WM_LBUTTONDBLCLK := 0x0203
-	WM_RBUTTONDOWN	  := 0x0204
-	WM_RBUTTONUP	  := 0x0205
-	WM_RBUTTONDBLCLK := 0x0206
-	WM_MBUTTONDOWN	  := 0x0207
-	WM_MBUTTONUP	  := 0x0208
-	WM_MBUTTONDBLCLK := 0x0209
-	sButton := "WM_" sButton "BUTTON"
-	oIcons := {}
-	oIcons := TrayIcon_GetInfo(sExeName)
-	msgID  := oIcons[index].msgID
-	uID    := oIcons[index].uID
-	hWnd   := oIcons[index].hWnd
-	if bDouble
-		PostMessage(msgID, uID, %sButton . "DBLCLK"%, , "ahk_id " hWnd)
-	else
-	{
-		PostMessage(msgID, uID, %sButton "DOWN"%, , "ahk_id " hWnd)
-		PostMessage(msgID, uID, %sButton "UP"%, , "ahk_id " hWnd)
-	}
-	DetectHiddenWindows Setting_A_DetectHiddenWindows
-	return
-}
+MsgBox desktops[1] " | " desktops[2] " | " desktops[3] " | " getCurrentDesktopId()
 
-TrayIcon_ButtonIndex(trayObject, buttonIndex, sButton := "L", bDouble := false, index := 1)
-{
-	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
-	WM_MOUSEMOVE	  := 0x0200
-	WM_LBUTTONDOWN	  := 0x0201
-	WM_LBUTTONUP	  := 0x0202
-	WM_LBUTTONDBLCLK := 0x0203
-	WM_RBUTTONDOWN	  := 0x0204
-	WM_RBUTTONUP	  := 0x0205
-	WM_RBUTTONDBLCLK := 0x0206
-	WM_MBUTTONDOWN	  := 0x0207
-	WM_MBUTTONUP	  := 0x0208
-	WM_MBUTTONDBLCLK := 0x0209
-	sButton := "WM_" sButton "BUTTON"
-	msgID  := trayObject[buttonIndex].msgID
-	uID    := trayObject[buttonIndex].uID
-	hWnd   := trayObject[buttonIndex].hWnd
-	if bDouble
-		PostMessage(msgID, uID, %sButton . "DBLCLK"%, , "ahk_id " hWnd)
-	else
-	{
-		PostMessage(msgID, uID, %sButton "DOWN"%, , "ahk_id " hWnd)
-		PostMessage(msgID, uID, %sButton "UP"%, , "ahk_id " hWnd)
-	}
-	DetectHiddenWindows Setting_A_DetectHiddenWindows
-	return
-}
-
-;gg := TrayIcon_GetInfo()
-
-;TrayIcon_Button("Steam.exe","R")
+MsgBox indexOf(desktops, getCurrentDesktopId())

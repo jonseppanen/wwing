@@ -78,13 +78,21 @@ IsWindowCloaked(hwnd) {
 ;=======================================================================
 OpenDownloads(){
   global UserDir
-  If(WinExist(Downloads))
+  If(WinExist("Downloads"))
   {
       WinActivate
   }
   else{
       Run(explore UserDir . "\Downloads")
   }
+}
+
+OpenDesktops(){
+  send "#{tab}"
+}
+
+goToDesktop(wParam, lParam){
+  switchToDesktop(wParam)
 }
 
 OpenSearch(){

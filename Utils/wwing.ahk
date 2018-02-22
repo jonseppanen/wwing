@@ -21,14 +21,17 @@ isStartOpen := false
 
 #Include inc_graphics.ahk
 #Include inc_lib.ahk
+#Include inc_desktops.ahk
 #Include inc_systray.ahk
 
+
 OnMessage(16686, "OpenDownloads")
-OnMessage(16685, "OpenSearch")
+OnMessage(16685, "OpenDesktops")
 OnMessage(16684, "OpenStart")
 OnMessage(16683, "OpenNotifications")
 OnMessage(16682, "SystrayClickNormal")
 OnMessage(16681, "SystrayClickExtended")
+OnMessage(16680, "goToDesktop")
 
 SetTimerAndFire("cleanSystrayMemory",30000)
 SetTimerAndFire("CheckForMaxedWindow", 150)
