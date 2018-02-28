@@ -338,15 +338,41 @@ ReplaceIcon(wParam, lParam, sTray)
 {
 	Global systemTrayData
 	Global trayIconDir
-	SelectedIcon := FileSelect(1, trayIconDir . "\" . systemTrayData[sTray,wParam].Process, "Select the System Tray Icon for this Process that you wish to replace","(*.png)")
+	Global iconCheck
+	SelectedIcon := FileSelect(1, trayIconDir . "\" . systemTrayData[sTray,wParam].Process, "Select the System Tray Icon for this Process that you wish to replace","(*.png; *.ico)")
 	if(SelectedIcon)
 	{
-		ReplacementIcon := FileSelect(1, , "Select the new Icon you wish to use","(*.png)")
+		ReplacementIcon := FileSelect(1, , "Select the new Icon you wish to use","(*.png; *.ico)")
 		if(ReplacementIcon)
-		{
-			FileCopy  ReplacementIcon, SelectedIcon, 1
-			;FIX
-			SendRainmeterCommand("[!UpdateMeter iconSystray" wParam " wwing]")
+		{		
+			SplitPath ReplacementIcon , , , ReplacementIconExt, ReplacementIconName
+			SplitPath SelectedIcon , , SelectedIconDir, SelectedIconExt,SelectedIconName
+
+			if(ReplacementIconExt != SelectedIconExt)
+			{				
+				destinationFile := SelectedIconDir "\" SelectedIconName "." ReplacementIconExt
+				FileDelete SelectedIcon				
+			}
+			else
+			{
+				destinationFile := SelectedIcon
+			}	
+
+			FileCopy  ReplacementIcon,destinationFile, 1
+			iconCheck[systemTrayData[sTray,wParam].hIcon] := destinationFile
+			systemTrayData[sTray,wParam].hIcon := destinationFile
+			systemTrayData[sTray,wParam].Delete("cachehIcon")
+
+			if(stray = "NotifyIconOverflowWindow")
+			{
+				iconString := "btnOverflowTray"
+			}
+			else
+			{
+				iconString := "btnSysTray"
+			}
+
+			SendRainmeterCommand("[!UpdateMeter " iconString wParam " wwing][!Redraw wwing]")
 		}
 	}
 }
