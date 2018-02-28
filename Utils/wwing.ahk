@@ -88,6 +88,11 @@ CheckForMaxedWindow()
   active_id := WinGetID("A")
   isminMax := WinGetMinMax("A")
 
+  if(WinGetClass("ahk_id " active_id) = "RainmeterMeterWindow" || WinGetClass("ahk_id " active_id) = "Progman")
+  { 
+    return
+  }
+
   if(lastMinMax != isminMax)
   {
     if(isminMax = 1 && !IsWindowCloaked(active_id) && getIsOnMonitor(active_id))
