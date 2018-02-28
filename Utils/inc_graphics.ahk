@@ -156,6 +156,15 @@ SaveHICONtoFile( hicon, iconFile ) ; By SKAN | 06-Sep-2017 | goo.gl/8NqmgJ
 	Return True
 }
 
+extractIconFromExe(FileName)
+{
+	ptr := A_PtrSize =8 ? "ptr" : "uint" 
+	hIcon := DllCall("Shell32\ExtractAssociatedIcon" (A_IsUnicode ? "W" : "A"), ptr, DllCall("GetModuleHandle", ptr, 0, ptr), str, FileName, "ushort*", lpiIcon, ptr)   ;only supports 32x32
+
+	return hIcon
+}
+
+
 ;=======================================================================
 ;            Split a Hex code to indivdual RGB colors
 ;=======================================================================

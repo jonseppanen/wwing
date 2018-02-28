@@ -24,7 +24,6 @@ isStartOpen := false
 #Include inc_desktops.ahk
 #Include inc_systray.ahk
 
-
 OnMessage(16686, "OpenDownloads")
 OnMessage(16685, "OpenDesktops")
 OnMessage(16684, "OpenStart")
@@ -36,9 +35,10 @@ OnMessage(16680, "goToDesktop")
 SetTimerAndFire("cleanSystrayMemory",30000)
 SetTimerAndFire("CheckForMaxedWindow", 150)
 SetTimerAndFire("CheckForDownloadsInProgress", 2000)
-SetTimerAndFire("TrayIcon_GetInfo", 250)
+SetTimerAndFire("getCurrentDesktopId", 1000)
 SetTimer("startMenuCheck", 150)
-SetTimer("refreshSystemTray", 250)
+SetTimerAndFire("TrayIcon_GetInfo", 400)
+SetTimer("refreshSystemTray", 400)
 
 startMenuCheck()
 {

@@ -4,9 +4,10 @@
 getIsOnMonitor(winID, nMonitor := "")
 {
   MonitorGetWorkArea(nMonitor, monLeft, monTop, monRight, monBottom)
+  
   WinGetPos(winX,winY,Width,Height,"ahk_id " winID)
 
-  if((Width - 8) <= monRight && (winX + 4) >= monLeft && (winY + 4) >= monTop && (Height + 8) <= monBottom)
+  if((Width - 16) <= monRight && (winX + 8) >= monLeft && (winY + 8) >= monTop && (Height + 16) <= monBottom)
   {
     return True
   }
@@ -87,14 +88,6 @@ OpenDownloads(){
   }
 }
 
-OpenDesktops(){
-  send "#{tab}"
-}
-
-goToDesktop(wParam, lParam){
-  switchToDesktop(wParam)
-}
-
 OpenSearch(){
   Global isStartOpen := true
   send "#s"
@@ -110,6 +103,14 @@ OpenNotifications(){
 }
 
 
+Guid_ToStr(ByRef VarOrAddress)
+{
+	pGuid := IsByRef(VarOrAddress) ? &VarOrAddress : VarOrAddress
+	VarSetCapacity(sGuid, 78) ; (38 + 1) * 2
+	if !DllCall("ole32\StringFromGUID2", "Ptr", pGuid, "Ptr", &sGuid, "Int", 39)
+		throw Exception("Invalid GUID", -1, Format("<at {1:p}>", pGuid))
+	return StrGet(&sGuid, "UTF-16")
+}
 ;=======================================================================
 ;            Check progress of any downloading files
 ;=======================================================================
@@ -157,7 +158,7 @@ Send_WM_COPYDATA(ByRef StringToSend, ByRef TargetWindowClass)
     NumPut(1, CopyDataStruct) ; Per example at https://docs.rainmeter.net/developers/
     NumPut(SizeInBytes, CopyDataStruct, A_PtrSize)  ; OS requires that this be done.
     NumPut(&StringToSend, CopyDataStruct, 2*A_PtrSize)  ; Set lpData to point to the string itself.
-    SendMessage(0x4a, 0, &CopyDataStruct,, "ahk_class " TargetWindowClass)  ; 0x4a is WM_COPYDATA. Must use Send not Post.
+    SendMessage(0x4a, 0, &CopyDataStruct,, TargetWindowClass)  ; 0x4a is WM_COPYDATA. Must use Send not Post.
     return ErrorLevel  ; Return SendMessage's reply back to our caller.
 }
 
@@ -190,6 +191,17 @@ SetTimerAndFire(timedFunction, timedDuration)
 }
 
 ;=======================================================================
+;            runTimerNow will immediately bring forward and execute a timer, and then reset it.
+;=======================================================================
+runTimerNow(timedFunction)
+{
+    SetTimer timedFunction, "Off"
+    %timedFunction%()
+    SetTimer timedFunction, "On"
+}
+
+
+;=======================================================================
 ;            :D
 ;=======================================================================
 EmptyMem(PIDtoEmpty)
@@ -198,3 +210,26 @@ EmptyMem(PIDtoEmpty)
     DllCall("SetProcessWorkingSetSize", "UInt", h, "Int", -1, "Int", -1)
     DllCall("CloseHandle", "Int", h)
 }
+
+;=======================================================================
+;            Everyone needs dis.
+;=======================================================================
+indexOf(obj, item)
+{
+	for i, val in obj {
+		if (val = item)
+		{
+			return i
+		}
+	}
+}
+
+;=======================================================================
+;            Logs a message to rainmeter
+;=======================================================================
+
+debug(messageString)
+{   
+    SendRainmeterCommand("[!Log `"" . messageString .  "`" notice]")
+}
+

@@ -1,17 +1,9 @@
-GuiObj := GuiCreate("Disabled","VirtualDesktopSwitcher")
-GuiObj.show
-GuiObj.hide
-iVirtualDesktopManager := ComObjCreate("{aa509086-5ca9-4c25-8f95-589d3c07b48a}", "{a5cd92ff-29be-454c-8d04-d82879fb3f1b}")
-desktops := listDesktops()
-setDesktopIndicator()
+OpenDesktops(){
+  send "#{tab}"
+}
 
-Guid_ToStr(ByRef VarOrAddress)
-{
-	pGuid := IsByRef(VarOrAddress) ? &VarOrAddress : VarOrAddress
-	VarSetCapacity(sGuid, 78) ; (38 + 1) * 2
-	if !DllCall("ole32\StringFromGUID2", "Ptr", pGuid, "Ptr", &sGuid, "Int", 39)
-		throw Exception("Invalid GUID", -1, Format("<at {1:p}>", pGuid))
-	return StrGet(&sGuid, "UTF-16")
+goToDesktop(wParam, lParam){
+  switchToDesktop(wParam)
 }
 
 getWindowDesktopId(hWnd) 
@@ -28,15 +20,51 @@ getWindowDesktopId(hWnd)
 getCurrentDesktopId()
 {
 	Global GuiObj
-	GuiObj.show("NoActivate")
+	Global interrupt_getCurrentDesktopId
+
+	if(WinGetClass("A") = "MultitaskingViewFrame")
+    {
+		exit
+    }
+
+	if(interrupt_getCurrentDesktopId)
+	{
+		interrupt_getCurrentDesktopId := false
+		SetTimer("getCurrentDesktopId","off")
+		SetTimer("getCurrentDesktopId","on")
+		exit
+	}
+
+	SetTimer("getCurrentDesktopId","off")
+
 	hwnd := GuiObj.Hwnd
-	WinWait "ahk_id " hwnd
-	desktopId := SubStr(RegExReplace(Guid_ToStr(getWindowDesktopId(hWnd)), "[-{}]"), 17)
+	GuiObj.show("NoActivate")
+	WinWait "ahk_id " hwnd,,0.5
+	GuiObj.opt("-ToolWindow")
+	thisDesktopID := SubStr(RegExReplace(Guid_ToStr(getWindowDesktopId(hWnd)), "[-{}]"), 17)
+	GuiObj.opt("+ToolWindow")
+
 	GuiObj.hide
-	;WinWaitClose "ahk_id " hwnd
-	;sleep 50 
-	return desktopId
+	if(thisDesktopID < 1)
+	{
+		SetTimer("getCurrentDesktopId","on")
+		exit
+	}
+	
+	Global currentDesktopN
+	Global currentDesktopID
+	Global desktops
+	thisDesktopN := indexOf(desktops, thisDesktopID)
+	if(currentDesktopN != thisDesktopN)
+	{
+		currentDesktopN := thisDesktopN
+		setDesktopIndicator(thisDesktopN)
+	}
+
+	SetTimer("getCurrentDesktopId","on")
+	
 }
+
 
 listDesktops()
 {
@@ -69,66 +97,70 @@ listDesktops()
 	return desktops
 }	
 
-setDesktopIndicator(desktopN := 0)
+setDesktopIndicator(desktopN)
 {
-	if(desktopN = 0)
-	{
-		Global desktops
-		desktopId := getCurrentDesktopId()
-		currentDesktopN := indexOf(desktops,desktopId)
-	}
-	else
-	{
-		currentDesktopN := desktopN
-	}
-
-	SendRainmeterCommand("[!SetOption BtnDesktopIndicator x `"[BtnDesktop" currentDesktopN ":x]`" wwing][!UpdateMeter BtnDesktopIndicator wwing][!ShowMeter BtnDesktopIndicator wwing]")
+	SendRainmeterCommand("[!SetOption BtnDesktopIndicator x `"[BtnDesktop" desktopN ":x]`" wwing][!UpdateMeter BtnDesktopIndicator wwing][!ShowMeter BtnDesktopIndicator wwing][!Redraw wwing]")
 }
 
-indexOf(obj, item)
+pauseRaindock()
 {
-	for i, val in obj {
-		if (val = item)
-		{
-			return i
-		}
+	if(winExist("raindock.ahk - AutoHotkey v2.0-a083-97803ae"))
+	{
+		Send_WM_COPYDATA("pauseRaindock","raindock.ahk - AutoHotkey v2.0-a083-97803ae")
 	}
 }
 
-switchToDesktop(desktopN)
+resumeRaindock()
+{
+	if(winExist("raindock.ahk - AutoHotkey v2.0-a083-97803ae"))
+	{
+		Send_WM_COPYDATA("resumeRaindock","raindock.ahk - AutoHotkey v2.0-a083-97803ae")
+	}
+}
+
+switchToDesktop(selectedDesktopN)
 {
 	
 	Global desktops
+	Global currentDesktopID
+	Global currentDesktopN
+	Global interrupt_getCurrentDesktopId
+	previousDesktopN := currentDesktopN
 
-	thisDesktop := getCurrentDesktopId()
-	thisDesktopN := indexOf(desktops, thisDesktop)
-
-	if(thisDesktop = desktops[desktopN])
+	if(currentDesktopID = desktops[selectedDesktopN])
 	{
 		return
 	}
-	else if(thisDesktopN > desktopN)
+	else 
 	{
-		setDesktopIndicator(desktopN)
-		loop (thisDesktopN - desktopN)
+		pauseRaindock()
+		interrupt_getCurrentDesktopId := true
+		currentDesktopN := selectedDesktopN
+		if(previousDesktopN > selectedDesktopN)
 		{
-			send "#^{Left}"
-			Sleep 50
+			loop (previousDesktopN - selectedDesktopN)
+			{
+				send "#^{Left}"
+				Sleep 100
+			}
 		}
-	}
-	else
-	{
-		setDesktopIndicator(desktopN)
-		loop (desktopN - thisDesktopN)
+		else
 		{
-			send "#^{Right}"
-			Sleep 50
+			loop (selectedDesktopN - previousDesktopN)
+			{
+				send "#^{Right}"
+				Sleep 100
+			}
 		}
+		resumeRaindock()
 	}
 }
 
 
-
-
-
-
+currentDesktopID := ""
+currentDesktopN := ""
+GuiObj := GuiCreate("Disabled Toolwindow","VirtualDesktopSwitcher")
+GuiObj.show
+GuiObj.hide
+iVirtualDesktopManager := ComObjCreate("{aa509086-5ca9-4c25-8f95-589d3c07b48a}", "{a5cd92ff-29be-454c-8d04-d82879fb3f1b}")
+desktops := listDesktops()

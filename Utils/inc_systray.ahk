@@ -6,7 +6,7 @@ TrayIcon_GetInfo()
 	Global isStartOpen
 	if(isStartOpen = true)
 	{
-		return
+		exit
 	}
 	
 	DetectHiddenWindows (Setting_A_DetectHiddenWindows := A_DetectHiddenWindows) ? "On" : "Off"
@@ -26,7 +26,7 @@ TrayIcon_GetInfo()
 		if(isStartOpen = true)
 		{
 			DetectHiddenWindows Setting_A_DetectHiddenWindows
-			return
+			exit
 		}
 
 		TrayIndex := A_Index
@@ -54,7 +54,8 @@ TrayIcon_GetInfo()
 			WinActivate "ahk_id " active_id
 			Sleep 1000
 			WinActivate "ahk_id " active_id
-			return
+			DetectHiddenWindows Setting_A_DetectHiddenWindows
+			exit
 		}
 		
 		Loop TrayCount
@@ -78,13 +79,14 @@ TrayIcon_GetInfo()
 
 			sProcess :=  WinGetProcessName("ahk_id " hWnd)
 			
-			if(hWnd == "0")
+			if(hWnd = "0")
 			{
 				PostMessage(0x12, 0, 0, , "Program Manager")
 				Sleep 250
 				OutputVar := ProcessClose(explorerProcess)
 				Sleep 250
-				return
+				DetectHiddenWindows Setting_A_DetectHiddenWindows
+				exit
 			}
 
 			if(!sProcess)
@@ -112,14 +114,6 @@ TrayIcon_GetInfo()
 				{ 
 					continue
 				}
-				else if(SubStr(uID, 1, 2) = "49")
-				{
-					word_array := StrSplit(TestString, A_Space, ".")
-					Array := StrSplit(sTooltip , "`n")
-					SendRainmeterCommand("[!SetVariable ifSSID `" @ " Array[1] "`"  wwing\components\network]")
-					SendRainmeterCommand("[!SetVariable ifInternet `"" Array[2] "`"  wwing\components\network]")
-					continue
-				}
 			}
 
 			Index := Index + 1					
@@ -135,32 +129,17 @@ TrayIcon_GetInfo()
 			systemTrayData[sTray,Index,"Title"] 	:= sTitle
 			systemTrayData[sTray,Index,"Tooltip"] := sToolTip
 			systemTrayData[sTray,Index,"Tray"]    := sTray
-
-			if(sProcess = "steam.exe")
-			{
-				SendRainmeterCommand("[!SetOption BtnSteam RightMouseDownAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 1668" TrayIndex " " Index " 3`"]`"`"`" wwing][!SetOption BtnSteam RightMouseUpAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 1668" TrayIndex " " Index " 6`"]`"`"`" wwing]")
-			}
 	
 			if(!iconCheck[hIcon])
-			{
+			{		
 				processIconFolder := dirCheck(TrayIconDir "\" sProcess)
-							
+				hIconBmp := hIcon
 				iconBitmap := Gdip_CreateBitmapFromHICON(hIcon)
 
 				if(!iconBitmap)
 				{
-					NewMissingIcon := trayIconDir "\" systemTrayData[sTray,Index,"Process"] "\" sTitle ".png"  
-
-					if(!FileExist(NewMissingIcon))
-					{
-						FileCopy A_WorkingDir . "\missing.png", NewMissingIcon
-					}
-					
-					iconCheck[hIcon] := NewMissingIcon
-					systemTrayData[sTray,Index,"IconFile"] := iconCheck[hIcon]
-
-					systemTrayData[sTray,Index,"Tooltip"] := systemTrayData[sTray,Index,"Tooltip"] "`r`n`r`n Icon missing - Middle click to replace"
-					return
+					hIconBmp := extractIconFromExe(WinGetProcessPath("ahk_id " hWnd))
+					iconBitmap := Gdip_CreateBitmapFromHICON(hIconBmp)
 				}
 
 				iconPixels := Gdip_GetPixels(iconBitmap)
@@ -180,18 +159,13 @@ TrayIcon_GetInfo()
 				{	
 					if(!FileExist(iconFileICO))
 					{
-						SaveHICONtoFile(hicon,iconFileICO)
+						SaveHICONtoFile(hIconBmp,iconFileICO)
 					}
 
 					iconCheck[hIcon] := iconFileICO
-				}			
+				}	
 			}
 			systemTrayData[sTray,Index,"IconFile"] := iconCheck[hIcon]
-		}
-
-		if(TrayCount & !systemTrayData[sTray])
-		{
-			return
 		}
 
 		if(!systemTrayData[sTray])
@@ -219,10 +193,7 @@ cleanSystrayMemory()
 
 renderSystrayIconTheme(workFile,renderTo)
 {
-    SendRainmeterCommand("[!SetOption magickmeter1 ExportTo `"" . renderTo . "`" wwing]")
-    SendRainmeterCommand("[!SetOption magickmeter1 Image `"Rectangle 0,0,#vIconWidth#,#vIconHeight#  | Color 255,255,255,1  `"  wwing]")
-    SendRainmeterCommand("[!SetOption magickmeter1 Image2 `"File " . workFile . " | RenderSize 24,24 | move ((#vIconWidth# - 24) / 2),((#vIconHeight# - 24) / 2)`"  wwing]")
-    SendRainmeterCommand("[!UpdateMeasure magickmeter1 wwing]") 
+    SendRainmeterCommand("[!SetOption magickmeter1 ExportTo `"" . renderTo . "`" wwing][!SetOption magickmeter1 Image `"Rectangle 0,0,#vIconWidth#,#vIconHeight#  | Color 255,255,255,1  `"  wwing][!SetOption magickmeter1 Image2 `"File " . workFile . " | RenderSize 24,24 | move ((#vIconWidth# - 24) / 2),((#vIconHeight# - 24) / 2)`"  wwing][!UpdateMeasure magickmeter1 wwing]")
 }
 
 updateCache(cacheObject,cacheString)
@@ -235,38 +206,45 @@ updateCache(cacheObject,cacheString)
 }
 
 LastSystrayCount := []
+SteamActive := False
 
 refreshSystemTray()
 {
 	Global systemTrayData
 	Global LastSystrayCount
 	Global rainIconName
-	rainIconName := ["iconExpandedTray","iconSystray"]
+	Global SteamActive
 
 	if(!systemTrayData)
 	{
-		return
+		exit
 	}
 
 	for sTray in systemTrayData
 	{
+		if(stray = "NotifyIconOverflowWindow")
+		{
+			TrayStyleName := "styleOverflowTray"
+			TrayGroupName := "groupOverflowTray"
+			iconString := "btnOverflowTray"
+		}
+		else
+		{
+			TrayStyleName := "styleSystray"
+			TrayGroupName := "groupSystray"
+			iconString := "btnSysTray"
+		}
+		
 		TrayIndex := A_Index
-		iconString := rainIconName[TrayIndex]
 		TrayIconMax := 0
+		visIndex := 1
+			
 		RainMeterCommand := ""
-		visIndex := 0
+		UpdateRequired := False
+
 		loop 20
 		{
 			nTrayIcon := A_Index
-
-			if(systemTrayData[sTray,nTrayIcon] && systemTrayData[sTray,nTrayIcon].Process = "steam.exe")
-			{
-				continue	
-			}
-			else
-			{
-				visIndex := visIndex + 1
-			}	
 			
 			iconSystray := iconString visIndex		
 
@@ -276,24 +254,24 @@ refreshSystemTray()
 				continue
 			}
 
-			RainMeterCommand := RainMeterCommand "[!SetOption `"" iconSystray "`" Hidden 0 wwing]"
-
-			if(updateCache(systemTrayData[sTray,nTrayIcon],"hIcon"))
+			if(systemTrayData[sTray,nTrayIcon].Process = "steam.exe")
 			{
-							
-				SplitPath systemTrayData[sTray,nTrayIcon].IconFile , , ,iconExt
+				if(!SteamActive)
+				{
+					SteamActive := True
+					SendRainmeterCommand("[!SetOption BtnSteam RightMouseDownAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 1668" TrayIndex " " nTrayIcon " 3`"]`"`"`" wwing][!SetOption BtnSteam RightMouseUpAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 1668" TrayIndex " " nTrayIcon " 6`"]`"`"`" wwing]")
+				}
+				continue	
+			}
 
-				if(iconExt = "ico")
+			if(systemTrayData[sTray,nTrayIcon].Process = "explorer.exe")
+			{
+				if(SubStr(systemTrayData[sTray,nTrayIcon].uID, 1, 2) = "49")
 				{
-					varStyle := " | styleSystrayIconUnstyled"
+					TooltipArray := StrSplit(systemTrayData[sTray,nTrayIcon].Tooltip , "`n")
+					SendRainmeterCommand("[!SetVariable ifSSID `" @ " TooltipArray[1] "`"  wwing\components\network][!SetVariable ifInternet `"" TooltipArray[2] "`"  wwing\components\network]")
+					continue
 				}
-				else
-				{
-					varStyle := ""
-				}
-				
-				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " imagename `"" systemTrayData[sTray,nTrayIcon].IconFile "`" wwing]"
-				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " MeterStyle `" #iconStyleSystray" TrayIndex "# " varStyle " `" wwing]"
 			}
 
 			if(updateCache(systemTrayData[sTray,nTrayIcon],"Process"))
@@ -304,20 +282,33 @@ refreshSystemTray()
 				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " LeftMouseUpAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 1668" TrayIndex " " nTrayIcon " 4`"]`"`"`" wwing]"
 				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " MiddleMouseUpAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 1668" TrayIndex " " nTrayIcon " 5`"]`"`"`" wwing]"
 				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " RightMouseUpAction `"`"`"[!CommandMeasure MeasureWindowMessage `"SendMessage 1668" TrayIndex " " nTrayIcon " 6`"]`"`"`" wwing]"
+				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " MouseOverAction `"`"`"[!SetOption #CURRENTSECTION# SolidColor #vTooltipColor#][!UpdateMeter #CURRENTSECTION#][!Setoption MeterProcess Text `"#" iconSystray "_title#`" `"wwing\components\systray`"][!Setoption MeterTooltip Text  `"#" iconSystray "_tooltip#`" `"wwing\components\systray`"][!Move `"([#CURRENTSECTION#:X] - ((#vSkinWidth#) / 2 - 24))`" `"40`" `"wwing\components\systray`"][!UpdateMeter `"MeterProcess`" `"wwing\components\systray`"][!UpdateMeter `"MeterTooltip`" `"wwing\components\systray`"][!Redraw `"wwing\components\systray`"][!Show `"wwing\components\systray`"]`"`"`" wwing]"
+				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " MouseLeaveAction `"`"`"[!SetOption #CURRENTSECTION# SolidColor 0,0,0,1][!UpdateMeter #CURRENTSECTION#][!Hide `"wwing\components\systray`"]`"`"`" wwing]"
+				UpdateRequired := True
 			}
+
+			if(updateCache(systemTrayData[sTray,nTrayIcon],"hIcon"))
+			{	
+				SplitPath systemTrayData[sTray,nTrayIcon].IconFile , , ,iconExt
+
+				if(iconExt = "ico")
+				{
+					varStyle := " | styleSystrayIconUnstyled"
+				}
+				else
+				{
+					varStyle := ""
+				}
+				RainMeterCommand := RainMeterCommand "[!SetOption `"" iconSystray "`" Hidden 0 wwing]"
+				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " imagename `"" systemTrayData[sTray,nTrayIcon].IconFile "`" wwing]"
+				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " MeterStyle `" sStyleIcon | sRightAlign | styleSystrayIcon | " TrayStyleName varStyle "`" wwing]"
+				UpdateRequired := True
+				
+			}	
 
 			if(updateCache(systemTrayData[sTray,nTrayIcon],"Tooltip") || updateCache(systemTrayData[sTray,nTrayIcon],"Title"))
 			{
-				/*
-				SplitPath systemTrayData[sTray,nTrayIcon].Process , , , , sProcessName
-				redirTooltip := systemTrayData[sTray,nTrayIcon].ToolTip
-				if(sProcessName = "Explorer" || systemTrayData[sTray,nTrayIcon].Process = redirTooltip || sProcessName = redirTooltip)
-				{
-					sProcessName := redirTooltip
-					redirTooltip := ""
-				}
-				*/
-				
+			
 				filterTitle := systemTrayData[sTray,nTrayIcon,"Title"]
 				filterTooltip := systemTrayData[sTray,nTrayIcon,"Tooltip"]
 
@@ -327,15 +318,20 @@ refreshSystemTray()
 					filterTooltip := ""
 				}
 
-
-
-				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " MouseOverAction `"`"`"[!SetOption #CURRENTSECTION# SolidColor #vTooltipColor#][!UpdateMeter #CURRENTSECTION#][!Setoption MeterProcess Text `"" filterTitle "`" `"wwing\components\systray`"][!Setoption MeterTooltip Text `"" filterTooltip "`" `"wwing\components\systray`"][!Move `"([#CURRENTSECTION#:X] - ((#vSkinWidth#) / 2 - 24))`" `"40`" `"wwing\components\systray`"][!UpdateMeter `"MeterProcess`" `"wwing\components\systray`"][!UpdateMeter `"MeterTooltip`" `"wwing\components\systray`"][!Redraw `"wwing\components\systray`"][!Show `"wwing\components\systray`"]`"`"`" wwing]"
-				RainMeterCommand := RainMeterCommand "[!SetOption " iconSystray " MouseLeaveAction `"`"`"[!SetOption #CURRENTSECTION# SolidColor 0,0,0,1][!UpdateMeter #CURRENTSECTION#][!Hide `"wwing\components\systray`"]`"`"`" wwing]"
+				SendRainmeterCommand("[!SetVariable " iconSystray "_title `"" filterTitle "`" wwing\components\systray][!SetVariable " iconSystray "_tooltip `"" filterTooltip "`" wwing\components\systray]")
 			}
+
+			visIndex := visIndex + 1
 		}
 
-		SendRainmeterCommand(RainMeterCommand)
+		if(UpdateRequired)
+		{
+			RainMeterCommand := RainMeterCommand "[!UpdateMeterGroup " TrayGroupName  " wwing][!Redraw wwing]"
+			SendRainmeterCommand(RainMeterCommand)
+		}
 	}
+
+	
 }
 
 ReplaceIcon(wParam, lParam, sTray)
@@ -349,6 +345,7 @@ ReplaceIcon(wParam, lParam, sTray)
 		if(ReplacementIcon)
 		{
 			FileCopy  ReplacementIcon, SelectedIcon, 1
+			;FIX
 			SendRainmeterCommand("[!UpdateMeter iconSystray" wParam " wwing]")
 		}
 	}
