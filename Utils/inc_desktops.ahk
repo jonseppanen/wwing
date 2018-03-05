@@ -6,51 +6,16 @@ goToDesktop(wParam, lParam){
   switchToDesktop(wParam)
 }
 
-getWindowDesktopId(hWnd) 
+getSessionId()
 {
-	Global iVirtualDesktopManager
-	
-	desktopId := ""
-	VarSetCapacity(desktopID, 16, 0)
-
-	Error := DllCall(NumGet(NumGet(iVirtualDesktopManager+0), 4*A_PtrSize), "Ptr", iVirtualDesktopManager, "Ptr", hWnd, "Ptr", &desktopID)			
-	return &desktopID
+    ProcessId := DllCall("GetCurrentProcessId", "UInt")
+    DllCall("ProcessIdToSessionId", "UInt", ProcessId, "UInt*", SessionId)
+    return SessionId
 }
 
 getCurrentDesktopId()
 {
-	Global GuiObj
-	Global interrupt_getCurrentDesktopId
-
-	if(WinGetClass("A") = "MultitaskingViewFrame")
-    {
-		exit
-    }
-
-	if(interrupt_getCurrentDesktopId)
-	{
-		interrupt_getCurrentDesktopId := false
-		SetTimer("getCurrentDesktopId","off")
-		SetTimer("getCurrentDesktopId","on")
-		exit
-	}
-
-	SetTimer("getCurrentDesktopId","off")
-
-	hwnd := GuiObj.Hwnd
-	GuiObj.show("NoActivate")
-	WinWait "ahk_id " hwnd,,0.5
-	GuiObj.opt("-ToolWindow")
-	thisDesktopID := SubStr(RegExReplace(Guid_ToStr(getWindowDesktopId(hWnd)), "[-{}]"), 17)
-	GuiObj.opt("+ToolWindow")
-
-	GuiObj.hide
-	if(thisDesktopID < 1)
-	{
-		SetTimer("getCurrentDesktopId","on")
-		exit
-	}
-	
+    thisDesktopID := SubStr(RegRead("HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\SessionInfo\" getSessionId() "\VirtualDesktops", "CurrentVirtualDesktop"), 17)
 	Global currentDesktopN
 	Global currentDesktopID
 	Global desktops
@@ -60,11 +25,7 @@ getCurrentDesktopId()
 		currentDesktopN := thisDesktopN
 		setDesktopIndicator(thisDesktopN)
 	}
-
-	SetTimer("getCurrentDesktopId","on")
-	
 }
-
 
 listDesktops()
 {
@@ -104,63 +65,102 @@ setDesktopIndicator(desktopN)
 
 pauseRaindock()
 {
-	if(winExist("raindock.ahk - AutoHotkey v2.0-a083-97803ae"))
-	{
-		Send_WM_COPYDATA("pauseRaindock","raindock.ahk - AutoHotkey v2.0-a083-97803ae")
-	}
+	DetectHiddenWindows "on"
+	targetWindow := WinGetID("raindock.ahk - AutoHotkey v" A_AhkVersion)
+	Send_WM_COPYDATA("pauseRaindock","ahk_id " targetWindow)
+	DetectHiddenWindows "off"
 }
 
 resumeRaindock()
 {
-	if(winExist("raindock.ahk - AutoHotkey v2.0-a083-97803ae"))
-	{
-		Send_WM_COPYDATA("resumeRaindock","raindock.ahk - AutoHotkey v2.0-a083-97803ae")
-	}
+	DetectHiddenWindows "on"
+	targetWindow := WinGetID("raindock.ahk - AutoHotkey v" A_AhkVersion)
+	Send_WM_COPYDATA("resumeRaindock","ahk_id " targetWindow)
+	DetectHiddenWindows "off"
 }
+
+restoreWorkspaceFocus(selectedWorkspaceN)
+{
+	Global desktopAppFocus
+	targetApplication := desktopAppFocus[selectedWorkspaceN]
+
+	if(WinExist("ahk_id " targetApplication))
+	{
+		WinActivate "ahk_id " targetApplication
+		if(checkFocusMaximized(targetApplication))
+		{
+			showBackBar(true)
+		}
+		else
+		{
+			hideBackBar(true)
+		}
+		
+	}
+	else
+	{
+		hideBackBar(true)
+	}
+
+}
+
+checkFocusMaximized(targetApplication)
+{
+	if(WinGetMinMax("ahk_id " targetApplication) = 1 && getIsOnMonitor(targetApplication) && !IsWindowCloaked("ahk_id " targetApplication))
+	{
+		return true
+	}
+	return false
+}
+
 
 switchToDesktop(selectedDesktopN)
 {
-	
 	Global desktops
 	Global currentDesktopID
 	Global currentDesktopN
-	Global interrupt_getCurrentDesktopId
-	previousDesktopN := currentDesktopN
+
+	previousDesktopN := currentDesktopN    
 
 	if(currentDesktopID = desktops[selectedDesktopN])
 	{
 		return
 	}
-	else 
+	else          
 	{
-		pauseRaindock()
-		interrupt_getCurrentDesktopId := true
 		currentDesktopN := selectedDesktopN
+		SetTimer "getCurrentDesktopId","off"
+		restoreWorkspaceFocus(selectedDesktopN)
 		if(previousDesktopN > selectedDesktopN)
 		{
+			
+			keyString := "#^{Left}"  
+			sendString := ""
+
 			loop (previousDesktopN - selectedDesktopN)
 			{
-				send "#^{Left}"
-				Sleep 100
+				sendString := sendString . keyString
 			}
-		}
+
+			SendEvent sendString
+		} 
 		else
 		{
+			keyString := "#^{Right}"
+			sendString := ""
+
 			loop (selectedDesktopN - previousDesktopN)
 			{
-				send "#^{Right}"
-				Sleep 100
-			}
+				sendString := sendString . keyString
+			}      
+
+			SendEvent sendString
 		}
-		resumeRaindock()
+		SetTimer "getCurrentDesktopId","on"
 	}
 }
 
 
 currentDesktopID := ""
 currentDesktopN := ""
-GuiObj := GuiCreate("Disabled Toolwindow","VirtualDesktopSwitcher")
-GuiObj.show
-GuiObj.hide
-iVirtualDesktopManager := ComObjCreate("{aa509086-5ca9-4c25-8f95-589d3c07b48a}", "{a5cd92ff-29be-454c-8d04-d82879fb3f1b}")
 desktops := listDesktops()

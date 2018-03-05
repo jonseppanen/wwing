@@ -233,3 +233,134 @@ debug(messageString)
     SendRainmeterCommand("[!Log `"" . messageString .  "`" notice]")
 }
 
+;=======================================================================
+;            Send an async function to the queue
+;=======================================================================
+
+queueAsyncFunction(asyncFunction,delayMS := 0)
+{
+    Global asyncQueue
+    delayN := (asyncQueue.length() + 1)
+    asyncQueue[delayN,asyncFunction] := delayMS
+}
+
+;=======================================================================
+;            async event loop
+;=======================================================================
+
+startEventLoop(tickRate)
+{
+    Global asyncQueue := []
+    Global asyncRate := tickRate
+    ;asyncQueue := asyncQueue ? asyncQueue : []
+    SetTimerAndFire("eventLoop", tickRate)
+}
+
+eventLoop()
+{
+    Global asyncQueue
+    Global asyncRate
+    for asyncQueueN in asyncQueue
+    {
+        for asyncFunction, delayedTime in asyncQueue[asyncQueueN]
+        {       
+            if(delayedTime > 0)
+            {
+                asyncQueue[asyncQueueN,asyncFunction] := (delayedTime - asyncRate)
+            }
+            else
+            {
+                %asyncFunction%()
+                asyncQueue.RemoveAt(asyncQueueN)
+            }
+        }
+    }
+}
+
+
+/*
+updateBackBar(targetApplication)
+{
+    ;targetApplication := WinGetID("A")
+    if(WinGetMinMax("ahk_id " targetApplication) = 1 && getIsOnMonitor(targetApplication) && !IsWindowCloaked("ahk_id " targetApplication))
+    {
+        showBackBar()
+    }
+    else
+    {
+        hideBackBar()
+    }  
+}
+*/
+
+state_titlebarColors := {}
+showBackBar(instant := false)
+{
+    CoordMode "Pixel", "Screen" 
+    fadeString := instant ? "" : "Fade"
+    Global state_titlebarColors
+    targetWindow := WinGetID("A")
+
+    if(!state_titlebarColors[targetWindow])
+    {
+        iterations := 0
+        PixelColorHex := PixelGetColor(6,46)
+        startCount := A_TickCount
+        While (PixelGetColor(6,46) = PixelColorHex && ((A_TickCount - startCount) < 200))
+        {
+            iterations++
+        }
+        TitlebarColor := PixelGetColor(6,46)
+        state_titlebarColors[targetWindow] := TitlebarColor
+    }
+    else
+    {
+        TitlebarColor := state_titlebarColors[targetWindow]
+    }
+
+    SendRainmeterCommand("[!SetOption ImageBackground SolidColor `"" SplitRGBColor(TitlebarColor) "`" wwing\components\background][!Update wwing\components\background][!Redraw wwing\components\background][!Show" fadeString " wwing\components\background]")
+}
+
+hideBackBar(instant := false)
+{
+  fadeString := instant ? "" : "Fade"
+  SendRainmeterCommand("[!Hide" fadeString " wwing\components\background]")
+}
+
+daemonWindowMinMax()
+{
+  Global state_daemonWindowMinMax
+  Global desktopAppFocus
+  Global currentDesktopN 
+  targetWindow := WinGetID("A")
+  minMaxState := WinGetMinMax("ahk_id " targetWindow)
+  boolInstant := state_daemonWindowMinMax ? False : True
+
+  if(WinGetClass("ahk_id " targetWindow) != "RainmeterMeterWindow")
+  {
+    if(!IsWindowCloaked(targetWindow))
+    {
+      if(minMaxState > -1)
+      {
+        desktopAppFocus[currentDesktopN] := targetWindow
+      }
+      else
+      {
+        desktopAppFocus[currentDesktopN] := ""
+      }
+      
+      if(state_daemonWindowMinMax != minMaxState . "_" . targetWindow)
+      {
+        if(minMaxState = 1 && getIsOnMonitor(targetWindow))
+        {
+          showBackBar(boolInstant)
+        }
+        else
+        {
+          hideBackBar(boolInstant)
+        }
+      }
+      state_daemonWindowMinMax := minMaxState . "_" . targetWindow
+    }
+  }
+} 

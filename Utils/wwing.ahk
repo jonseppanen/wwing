@@ -1,5 +1,4 @@
 #Persistent
-SendMode Input
 SetTitleMatchMode "RegEx"
 #SingleInstance force
 TraySetIcon(A_WorkingDir . "\wwing.ico")
@@ -17,6 +16,7 @@ trayIconList := {}
 lastMinMax := 0
 systrayCount := 0
 systemTrayData := {}
+desktopAppFocus := []
 isStartOpen := false
 
 #Include inc_graphics.ahk
@@ -33,12 +33,14 @@ OnMessage(16681, "SystrayClickExtended")
 OnMessage(16680, "goToDesktop")
 
 SetTimerAndFire("cleanSystrayMemory",30000)
-SetTimerAndFire("CheckForMaxedWindow", 150)
 SetTimerAndFire("CheckForDownloadsInProgress", 2000)
-SetTimerAndFire("getCurrentDesktopId", 1000)
-SetTimer("startMenuCheck", 150)
+SetTimerAndFire("getCurrentDesktopId", 100)
+SetTimerAndFire("daemonWindowMinMax", 100)
 SetTimerAndFire("TrayIcon_GetInfo", 400)
+SetTimer("startMenuCheck", 150)
 SetTimer("refreshSystemTray", 400)
+
+startEventLoop(100)
 
 startMenuCheck()
 {
@@ -68,46 +70,3 @@ startMenuCheck()
     }
   }
 }
-    
-
-showBackBar()
-{
-  CoordMode "Pixel", "Screen" 
-  Sleep 200
-  PixelColorHex := PixelGetColor(6,46)
-  PixelColor := SplitRGBColor(PixelColorHex)        
-  SendRainmeterCommand("[!SetOption ImageBackground SolidColor `"" PixelColor "`" wwing\components\background]")
-  SendRainmeterCommand("[!Redraw wwing\components\background]")
-  Sleep 100
-  SendRainmeterCommand("[!ShowFade wwing\components\background]")
-}
-
-CheckForMaxedWindow()
-{
-  Global lastMinMax
-  active_id := WinGetID("A")
-  isminMax := WinGetMinMax("A")
-
-  if(WinGetClass("ahk_id " active_id) = "RainmeterMeterWindow" || WinGetClass("ahk_id " active_id) = "Progman")
-  { 
-    return
-  }
-
-  if(lastMinMax != isminMax)
-  {
-    if(isminMax = 1 && !IsWindowCloaked(active_id) && getIsOnMonitor(active_id))
-    {
-      showBackBar()
-    }
-    else
-    {
-      SendRainmeterCommand("[!HideFade wwing\components\background]")
-    }
-  }
-  lastMinMax := isminMax
-}
-
-
-
-
-
