@@ -278,28 +278,18 @@ eventLoop()
 }
 
 
-/*
-updateBackBar(targetApplication)
-{
-    ;targetApplication := WinGetID("A")
-    if(WinGetMinMax("ahk_id " targetApplication) = 1 && getIsOnMonitor(targetApplication) && !IsWindowCloaked("ahk_id " targetApplication))
-    {
-        showBackBar()
-    }
-    else
-    {
-        hideBackBar()
-    }  
-}
-*/
-
 state_titlebarColors := {}
-showBackBar(instant := false)
+showBackBar(targetWindow,instant := false)
 {
     CoordMode "Pixel", "Screen" 
     fadeString := instant ? "" : "Fade"
     Global state_titlebarColors
-    targetWindow := WinGetID("A")
+
+    if(!checkFocusMaximized(targetWindow))
+    {
+        hideBackBar(instant)
+        return
+    }
 
     if(!state_titlebarColors[targetWindow])
     {
@@ -315,6 +305,7 @@ showBackBar(instant := false)
     }
     else
     {
+        Tooltip TitlebarColor
         TitlebarColor := state_titlebarColors[targetWindow]
     }
 
@@ -353,7 +344,7 @@ daemonWindowMinMax()
       {
         if(minMaxState = 1 && getIsOnMonitor(targetWindow))
         {
-          showBackBar(boolInstant)
+          showBackBar(targetWindow,boolInstant)
         }
         else
         {

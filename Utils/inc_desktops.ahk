@@ -79,29 +79,13 @@ resumeRaindock()
 	DetectHiddenWindows "off"
 }
 
-restoreWorkspaceFocus(selectedWorkspaceN)
+restoreWorkspaceFocus()
 {
 	Global desktopAppFocus
-	targetApplication := desktopAppFocus[selectedWorkspaceN]
-
-	if(WinExist("ahk_id " targetApplication))
-	{
-		WinActivate "ahk_id " targetApplication
-		if(checkFocusMaximized(targetApplication))
-		{
-			showBackBar(true)
-		}
-		else
-		{
-			hideBackBar(true)
-		}
-		
-	}
-	else
-	{
-		hideBackBar(true)
-	}
-
+	Global currentDesktopN
+	targetApplication := desktopAppFocus[currentDesktopN]
+	
+	WinActivate "ahk_id " targetApplication
 }
 
 checkFocusMaximized(targetApplication)
@@ -119,6 +103,7 @@ switchToDesktop(selectedDesktopN)
 	Global desktops
 	Global currentDesktopID
 	Global currentDesktopN
+	Global desktopAppFocus
 
 	previousDesktopN := currentDesktopN    
 
@@ -128,34 +113,31 @@ switchToDesktop(selectedDesktopN)
 	}
 	else          
 	{
-		currentDesktopN := selectedDesktopN
+		SetTimer "daemonWindowMinMax","off"
 		SetTimer "getCurrentDesktopId","off"
-		restoreWorkspaceFocus(selectedDesktopN)
+		sendString := ""
+		currentDesktopN := selectedDesktopN
+		showBackBar(desktopAppFocus[selectedDesktopN],true)
+		restoreWorkspaceFocus()
+
 		if(previousDesktopN > selectedDesktopN)
 		{
-			
 			keyString := "#^{Left}"  
-			sendString := ""
-
-			loop (previousDesktopN - selectedDesktopN)
-			{
-				sendString := sendString . keyString
-			}
-
-			SendEvent sendString
+			keyCount := (previousDesktopN - selectedDesktopN)
 		} 
-		else
+		else if(selectedDesktopN > previousDesktopN)
 		{
 			keyString := "#^{Right}"
-			sendString := ""
-
-			loop (selectedDesktopN - previousDesktopN)
-			{
-				sendString := sendString . keyString
-			}      
-
-			SendEvent sendString
+			keyCount := (selectedDesktopN - previousDesktopN)    
 		}
+
+		loop (keyCount)
+		{
+			sendString := sendString . keyString
+		}
+
+		SendEvent sendString
+		SetTimer "daemonWindowMinMax","on"
 		SetTimer "getCurrentDesktopId","on"
 	}
 }
