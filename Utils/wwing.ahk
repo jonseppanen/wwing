@@ -1,72 +1,119 @@
 #Persistent
+SendMode Input
 SetTitleMatchMode "RegEx"
 #SingleInstance force
-TraySetIcon(A_WorkingDir . "\wwing.ico")
 
 SendRainmeterCommand("[!SetVariable AHKVersion " . A_AhkVersion . " wwing]")
 SendRainmeterCommand("[!UpdateMeasure MeasureWindowMessage wwing]")
 UserDir := EnvGet("USERPROFILE")
-userProfileIconCheck()
 downloadDir := UserDir . "\Downloads\*.*"
-wwingDir := dirCheck(UserDir "\wwing")
-trayIconDir := dirCheck(wwingDir "\trayIcons")
-iconTmp := dirCheck(EnvGet("TMP") "\wwing")
-iconCheck := {}
-trayIconList := {}
-lastMinMax := 0
-systrayCount := 0
-systemTrayData := {}
-desktopAppFocus := []
-isStartOpen := false
-
-#Include inc_graphics.ahk
-#Include inc_lib.ahk
-#Include inc_desktops.ahk
-#Include inc_systray.ahk
-
+AppVisibility := ComObjCreate(CLSID_AppVisibility := "{7E5FE3D9-985F-4908-91F9-EE19F9FD1514}", IID_IAppVisibility := "{2246EA2D-CAEA-4444-A3C4-6DE827E44313}")
 OnMessage(16686, "OpenDownloads")
-OnMessage(16685, "OpenDesktops")
+OnMessage(16685, "OpenSearch")
 OnMessage(16684, "OpenStart")
 OnMessage(16683, "OpenNotifications")
-OnMessage(16682, "SystrayClickNormal")
-OnMessage(16681, "SystrayClickExtended")
-OnMessage(16680, "goToDesktop")
+SetTimer "CheckForMaxedWindow", 150
+SetTimer "CheckForDownloadsInProgress", 2000
 
-SetTimerAndFire("cleanSystrayMemory",30000)
-SetTimerAndFire("CheckForDownloadsInProgress", 2000)
-SetTimerAndFire("getCurrentDesktopId", 100)
-SetTimerAndFire("daemonWindowMinMax", 100)
-SetTimerAndFire("TrayIcon_GetInfo", 400)
-SetTimer("startMenuCheck", 150)
-SetTimer("refreshSystemTray", 400)
-
-startEventLoop(100)
-
-startMenuCheck()
+if(!FileExist(UserDir . "\wwing\profile.bmp"))
 {
-  Global isStartOpen
-  Global AppVisibility
-  ;if( (DllCall(NumGet(NumGet(AppVisibility+0)+4*A_PtrSize), "Ptr", AppVisibility, "Int*", fVisible) >= 0) && fVisible = 1 )
-  startMenuOpenCheck := isStartOpen
-
-  if(WinGetTitle("A") = "Cortana" && WinGetClass("A") = "Windows.UI.Core.CoreWindow")
+  Loop Files, UserDir . "\AppData\Roaming\Microsoft\Windows\AccountPictures\*" 
   {
-    isStartOpen := true
-  }
-  else
-  {
-    isStartOpen := false
-  }
-
-  if(isStartOpen != startMenuOpenCheck)
-  {
-    if(isStartOpen = true)
+    if(A_LoopFileExt = "accountpicture-ms")
     {
-      SendRainmeterCommand("[!HideMeterGroup groupStart wwing][!ShowMeterGroup groupSearch wwing]")
-    }
-    else
-    {
-      SendRainmeterCommand("[!HideMeterGroup groupSearch wwing][!ShowMeterGroup groupStart wwing]")
+      RunWait("AccountPicConverter.exe " . A_LoopFileFullPath,,hide)
+      FileDelete "*-448.bmp"
+      FileMove "*-96.bmp", UserDir . "\wwing\profile.bmp",true
+      break
     }
   }
 }
+return
+
+OpenDownloads(){
+  If(WinExist(Downloads))
+  {
+      WinActivate
+  }
+  else{
+      Run(explore UserDir . "\Downloads")
+  }
+}
+
+OpenSearch(){
+  send "#s"
+}
+
+OpenStart(){
+  SendRainmeterCommand("[!SetVariable MinMax 1 wwing]")
+  sendinput "{LWin}"
+}
+
+OpenNotifications(){
+  sendinput "#a"
+}
+
+IsWindowCloaked(hwnd) {
+    static gwa := DllCall("GetProcAddress", "ptr", DllCall("LoadLibrary", "str", "dwmapi", "ptr"), "astr", "DwmGetWindowAttribute", "ptr")
+    return (gwa && DllCall(gwa, "ptr", hwnd, "int", 14, "int*", cloaked, "int", 4) = 0) ? cloaked : 0
+}
+
+SendRainmeterCommand(command) {
+    if(Send_WM_COPYDATA(command, "ahk_class RainmeterMeterWindow") = 1){
+        WinShow("ahk_class Shell_TrayWnd")
+        WinShow("ahk_class Start Button")
+        ExitApp
+    }
+    else{
+        WinHide("ahk_class Shell_TrayWnd")
+        WinHide("ahk_class Start Button")
+    }
+}
+
+Send_WM_COPYDATA(ByRef StringToSend, ByRef TargetWindowClass)  
+{
+    VarSetCapacity(CopyDataStruct, 3*A_PtrSize, 0)  ; Set up the structure's memory area.
+    ; First set the structure's cbData member to the size of the string, including its zero terminator:
+    SizeInBytes := (StrLen(StringToSend) + 1) * (A_IsUnicode ? 2 : 1)
+    NumPut(1, CopyDataStruct) ; Per example at https://docs.rainmeter.net/developers/
+    NumPut(SizeInBytes, CopyDataStruct, A_PtrSize)  ; OS requires that this be done.
+    NumPut(&StringToSend, CopyDataStruct, 2*A_PtrSize)  ; Set lpData to point to the string itself.
+    SendMessage(0x4a, 0, &CopyDataStruct,, "ahk_class " TargetWindowClass)  ; 0x4a is WM_COPYDATA. Must use Send not Post.
+    return ErrorLevel  ; Return SendMessage's reply back to our caller.
+}
+
+CheckForMaxedWindow(){
+  Global AppVisibility
+    MinMaxVariable := 0
+    id := WinGetList(,, "Program Manager|^$")
+    Loop id.Length()
+    {
+      thisId := id[A_Index]
+      minMax := WinGetMinMax("ahk_id " thisId)
+      WinGetPos(,,, Height,"ahk_id " thisId)      
+      If ((minMax = 1 && Height && !IsWindowCloaked(thisId))|| (DllCall(NumGet(NumGet(AppVisibility+0)+4*A_PtrSize), "Ptr", AppVisibility, "Int*", fVisible) >= 0) && fVisible = 1 )
+      {
+        MinMaxVariable := 1
+        break
+      }
+    }
+  SendRainmeterCommand("[!SetVariable MinMax " . MinMaxVariable .  " wwing]")
+}
+
+CheckForDownloadsInProgress(){
+  Global downloadDir
+  Loop files, downloadDir 
+  {        
+      If (a_LoopFileExt = "part" || a_LoopFileExt = "partial" || a_LoopFileExt = "crdownload")
+      {
+          SendRainmeterCommand("[!SetVariable Downloading 1 wwing]")
+          return
+      }
+      else
+      {
+          SendRainmeterCommand("[!SetVariable Downloading 0 wwing]")
+      }
+  }
+}
+
+
